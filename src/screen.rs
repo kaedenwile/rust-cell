@@ -43,13 +43,18 @@ pub fn draw(
 ) {
     let (width, height) = size();
 
-    let Cursor::Single(sel) = cursor;
+    let screen_sel = match cursor {
+        Cursor::Single((r, c)) => (r + 1, c + 1),
+        Cursor::Row(r) => (*r + 1, 0),
+        Cursor::Column(c) => (0, *c + 1),
+    };
 
     let blank_cell = DisplayCell::blank();
 
     for y in 0..height {
         write!(screen, "{}", termion::cursor::Goto(1, y + 1)).unwrap();
         for x in 0..width {
+            // position on screen
             let row = if y < 2 { 0 } else { scroll.0 + 1 + (y - 2) / 2 };
             let col = if x < 4 { 0 } else { scroll.1 + 1 + (x - 4) / 8 };
             let text_pos = (x + 4) % 8;
@@ -89,31 +94,31 @@ pub fn draw(
                 RowHeader(row, text_pos)
             } else {
                 let cell = content
-                    .get(row as usize)
-                    .and_then(|x| x.get(col as usize))
+                    .get((row - 1) as usize)
+                    .and_then(|x| x.get((col - 1) as usize))
                     .unwrap_or_else(|| &blank_cell);
 
                 InsideCell((row, col), cell, text_pos)
             };
 
             let val = match position {
-                Corner { top_left: addr, .. } if addr == *sel => "╃",
+                Corner { top_left: addr, .. } if addr == screen_sel => "╃",
                 Corner {
                     top_left: (r, _),
                     bottom_right: (_, c),
-                } if (r, c) == *sel => "╄",
+                } if (r, c) == screen_sel => "╄",
                 Corner {
                     top_left: (_, c),
                     bottom_right: (r, _),
-                } if (r, c) == *sel => "╅",
+                } if (r, c) == screen_sel => "╅",
                 Corner {
                     bottom_right: addr, ..
-                } if addr == *sel => "╆",
+                } if addr == screen_sel => "╆",
                 Corner { .. } => "┼",
 
-                BetweenCols(addr, _) | BetweenCols(_, addr) if addr == *sel => "┃",
+                BetweenCols(addr, _) | BetweenCols(_, addr) if addr == screen_sel => "┃",
                 BetweenCols(..) => "│",
-                BetweenRows(addr, _) | BetweenRows(_, addr) if addr == *sel => "━",
+                BetweenRows(addr, _) | BetweenRows(_, addr) if addr == screen_sel => "━",
                 BetweenRows(..) => "─",
 
                 ColumnHeader(col, text_pos) => &Sheet::col_name(col as u8)

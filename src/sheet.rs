@@ -5,28 +5,12 @@ pub struct Sheet {
 }
 
 impl Sheet {
-    pub fn blank(size: u8) -> Self {
-        let mut sheet = Sheet {
+    pub fn blank() -> Self {
+        Sheet {
             content: Vec::new(),
             scroll: (0, 0),
             cursor: Cursor::Single((1, 1)),
-        };
-
-        // HEADER ROW
-        let mut header_row = vec![DisplayCell::blank()];
-        for i in 1..size {
-            header_row.push(DisplayCell::new(Sheet::col_name(i - 1)))
         }
-        sheet.content.push(header_row);
-
-        // BODY ROWS
-        for i in 1..size {
-            sheet.content.push(vec![
-                DisplayCell::new(i.to_string()).with_alignment(Alignment::Right)
-            ])
-        }
-
-        sheet
     }
 
     pub fn col_name(i: u8) -> String {
@@ -45,8 +29,7 @@ impl Sheet {
 
     fn get_row(&mut self, r: usize) -> &mut Vec<DisplayCell> {
         while r >= self.content.len() {
-            self.content
-                .push(vec![DisplayCell::new(self.content.len().to_string())])
+            self.content.push(vec![])
         }
 
         &mut self.content[r]
@@ -94,16 +77,28 @@ pub enum Alignment {
 pub enum Cursor {
     Single(Address),
     // Range(Address, Address),
+    Row(u16),
+    Column(u16),
 }
 
 impl Cursor {
     pub fn move_h(&self, direction: i16) -> Self {
-        let Cursor::Single((r, c)) = self;
-        Cursor::Single((*r, c.saturating_add_signed(direction)))
+        match self {
+            Cursor::Single((r, c)) if direction < 0 && *c == 0 => Cursor::Row(*r),
+            Cursor::Single((r, c)) => Cursor::Single((*r, c.saturating_add_signed(direction))),
+            Cursor::Row(r) if direction < 0 => Cursor::Row(*r), // copy of self
+            Cursor::Row(r) => Cursor::Single((*r, 0)),
+            Cursor::Column(c) => Cursor::Column(c.saturating_add_signed(direction)),
+        }
     }
 
     pub fn move_v(&self, direction: i16) -> Self {
-        let Cursor::Single((r, c)) = self;
-        Cursor::Single((r.saturating_add_signed(direction), *c))
+        match self {
+            Cursor::Single((r, c)) if direction < 0 && *r == 0 => Cursor::Column(*c),
+            Cursor::Single((r, c)) => Cursor::Single((r.saturating_add_signed(direction), *c)),
+            Cursor::Row(r) => Cursor::Row(r.saturating_add_signed(direction)),
+            Cursor::Column(c) if direction < 0 => Cursor::Column(*c), // copy of self
+            Cursor::Column(c) => Cursor::Single((0, *c)),
+        }
     }
 }
