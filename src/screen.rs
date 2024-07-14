@@ -55,8 +55,11 @@ pub fn draw(
         write!(screen, "{}", termion::cursor::Goto(1, y + 1)).unwrap();
         for x in 0..width {
             // position on screen
-            let row = if y < 2 { 0 } else { scroll.0 + 1 + (y - 2) / 2 };
-            let col = if x < 4 { 0 } else { scroll.1 + 1 + (x - 4) / 8 };
+            let row = if y < 2 { 0 } else { 1 + (scroll.0 + y - 2) / 2 };
+            let col = if x < 4 { 0 } else { 1 + (scroll.1 + x - 4) / 8 };
+
+            let y = if row == 0 { y } else { y + scroll.0 };
+            let x = if col == 0 { x } else { x + scroll.1 };
             let text_pos = (x + 4) % 8;
 
             // APPLY STYLING TO HEADER

@@ -33,6 +33,11 @@ fn main() {
                     }
                 }
 
+                Key::Char('w') if sheet.scroll.0 > 0 => sheet.scroll.0 -= 1,
+                Key::Char('a') if sheet.scroll.1 > 0 => sheet.scroll.1 -= 1,
+                Key::Char('s') => sheet.scroll.0 += 1,
+                Key::Char('d') => sheet.scroll.1 += 1,
+
                 Key::Up => sheet.cursor = sheet.cursor.move_v(-1),
                 Key::Down => sheet.cursor = sheet.cursor.move_v(1),
                 Key::Left => sheet.cursor = sheet.cursor.move_h(-1),
