@@ -1,11 +1,15 @@
-use crate::screen::{draw, get_screen};
+use crate::screen::draw;
 use crate::sheet::{Cursor, DisplayCell, Sheet};
+use crate::status_bar::StatusBar;
+use crate::window::{get_screen, Frame, Window};
 use std::io::{self, Write};
 use termion::event::*;
 use termion::input::TermRead;
 
 mod screen;
 mod sheet;
+mod status_bar;
+mod window;
 
 enum Mode {
     Nav,
@@ -16,10 +20,19 @@ fn main() {
     let stdin = io::stdin();
     let mut stdout = get_screen();
 
+    let screen_size = stdout.size();
+    let mut window = Frame::new(&mut stdout, (0, 0), (screen_size.0, screen_size.1 - 1));
+
+    // TODO
+    let mut stdout2 = get_screen();
+    let mut status_bar = Frame::new(&mut stdout2, (0, screen_size.1 - 1), (screen_size.0, 1));
+
     let mut sheet = Sheet::blank();
     let mut mode = Mode::Nav;
 
-    draw(&mut stdout, &sheet);
+    draw(&mut window, &sheet);
+    StatusBar::draw(&mut status_bar, &sheet);
+    window.flush().unwrap();
 
     for c in stdin.keys() {
         let evt = c.unwrap();
@@ -71,7 +84,9 @@ fn main() {
             }
         }
 
-        draw(&mut stdout, &sheet);
+        draw(&mut window, &sheet);
+        StatusBar::draw(&mut status_bar, &sheet);
+        window.flush().unwrap();
     }
 
     write!(stdout, "{}", termion::cursor::Show).unwrap();

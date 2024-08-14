@@ -1,24 +1,7 @@
 use crate::sheet::{Address, Alignment, Cursor, DisplayCell, Sheet};
-use std::io;
-use std::io::{Stdout, Write};
+use crate::window::Window;
 use termion::color;
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::screen::{AlternateScreen, IntoAlternateScreen};
 use termion::style;
-
-pub type Screen = AlternateScreen<RawTerminal<Stdout>>;
-
-pub fn get_screen() -> Screen {
-    let mut screen = io::stdout()
-        .into_raw_mode()
-        .unwrap()
-        .into_alternate_screen()
-        .unwrap();
-
-    write!(screen, "{}", termion::cursor::Hide).unwrap();
-
-    screen
-}
 
 enum Position<'a> {
     BetweenRows(Address, Address),
@@ -34,14 +17,14 @@ enum Position<'a> {
 }
 
 pub fn draw(
-    screen: &mut Screen,
+    window: &mut dyn Window,
     Sheet {
         content,
         cursor,
         scroll,
     }: &Sheet,
 ) {
-    let (width, height) = size();
+    let (width, height) = window.size();
 
     let screen_sel = match cursor {
         Cursor::Single((r, c)) => (r + 1, c + 1),
@@ -52,7 +35,8 @@ pub fn draw(
     let blank_cell = DisplayCell::blank();
 
     for y in 0..height {
-        write!(screen, "{}", termion::cursor::Goto(1, y + 1)).unwrap();
+        window.go_to(1, y + 1);
+
         for x in 0..width {
             // position on screen
             let row = if y < 2 { 0 } else { 1 + (scroll.0 + y - 2) / 2 };
@@ -65,7 +49,7 @@ pub fn draw(
             // APPLY STYLING TO HEADER
             if row == 0 || col == 0 {
                 write!(
-                    screen,
+                    window,
                     "{}{}",
                     color::Bg(color::LightBlack),
                     color::Fg(color::Black),
@@ -73,7 +57,7 @@ pub fn draw(
                 .unwrap()
             } else {
                 write!(
-                    screen,
+                    window,
                     "{}{}",
                     color::Bg(color::White),
                     color::Fg(color::Black),
@@ -148,17 +132,7 @@ pub fn draw(
                 }
             };
 
-            write!(screen, "{}{}", val, style::Reset).unwrap();
+            write!(window, "{}{}", val, style::Reset).unwrap();
         }
     }
-
-    screen.flush().unwrap();
-}
-
-pub fn size() -> (u16, u16) {
-    let Ok((cols, rows)) = termion::terminal_size() else {
-        panic!("Could not get terminal size!");
-    };
-
-    return (cols, rows);
 }
