@@ -1,29 +1,39 @@
+use std::cell::RefCell;
+use std::fmt::{Arguments, Debug, Pointer};
 use std::io::{stdout, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::{AlternateScreen, IntoAlternateScreen};
 
 // A rectangle that can be written to
-pub trait Window: Write {
+pub trait Window {
     // get size of the window
     fn size(&self) -> (u16, u16);
 
     // move cursor within the window
     fn go_to(&mut self, x: u16, y: u16);
+
+    fn write_fmt(&self, fmt: Arguments<'_>);
+
+    fn flush(&self);
 }
 
 // The base screen object
-pub type Screen = AlternateScreen<RawTerminal<Stdout>>;
+pub struct Screen {
+    inner: RefCell<AlternateScreen<RawTerminal<Stdout>>>,
+}
 
-pub fn get_screen() -> Screen {
-    let mut screen = stdout()
+pub fn screen() -> Screen {
+    let mut terminal = stdout()
         .into_raw_mode()
         .unwrap()
         .into_alternate_screen()
         .unwrap();
 
-    write!(screen, "{}", termion::cursor::Hide).unwrap();
+    write!(terminal, "{}", termion::cursor::Hide).unwrap();
 
-    screen
+    Screen {
+        inner: RefCell::new(terminal),
+    }
 }
 
 impl Window for Screen {
@@ -36,34 +46,32 @@ impl Window for Screen {
     }
 
     fn go_to(&mut self, x: u16, y: u16) {
-        write!(self, "{}", termion::cursor::Goto(x, y)).unwrap();
+        write!(self, "{}", termion::cursor::Goto(x, y));
+    }
+
+    fn write_fmt(&self, fmt: Arguments<'_>) {
+        self.inner.borrow_mut().write_fmt(fmt).unwrap()
+    }
+
+    fn flush(&self) {
+        self.inner.borrow_mut().flush().unwrap()
     }
 }
 
 // A subsection of the screen
 pub struct Frame<'a> {
-    parent: &'a mut dyn Window,
+    parent: &'a dyn Window,
     offset: (u16, u16),
     size: (u16, u16),
 }
 
 impl Frame<'_> {
-    pub fn new(parent: &mut dyn Window, offset: (u16, u16), size: (u16, u16)) -> Frame {
+    pub fn new(parent: &dyn Window, offset: (u16, u16), size: (u16, u16)) -> Frame {
         Frame {
             parent,
             offset,
             size,
         }
-    }
-}
-
-impl Write for Frame<'_> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.parent.write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.parent.flush()
     }
 }
 
@@ -84,6 +92,13 @@ impl Window for Frame<'_> {
             "{}",
             termion::cursor::Goto(x + self.offset.0, y + self.offset.1)
         )
-            .unwrap();
+    }
+
+    fn write_fmt(&self, fmt: Arguments<'_>) {
+        self.parent.write_fmt(fmt)
+    }
+
+    fn flush(&self) {
+        self.parent.flush()
     }
 }

@@ -54,7 +54,6 @@ pub fn draw(
                     color::Bg(color::LightBlack),
                     color::Fg(color::Black),
                 )
-                .unwrap()
             } else {
                 write!(
                     window,
@@ -62,7 +61,6 @@ pub fn draw(
                     color::Bg(color::White),
                     color::Fg(color::Black),
                 )
-                .unwrap();
             };
 
             use Position::*;
@@ -132,7 +130,7 @@ pub fn draw(
                 }
             };
 
-            write!(window, "{}{}", val, style::Reset).unwrap();
+            write!(window, "{}{}", val, style::Reset);
         }
     }
 }

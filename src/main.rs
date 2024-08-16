@@ -1,7 +1,7 @@
 use crate::screen::draw;
 use crate::sheet::{Cursor, DisplayCell, Sheet};
 use crate::status_bar::StatusBar;
-use crate::window::{get_screen, Frame, Window};
+use crate::window::{screen, Frame, Window};
 use std::io::{self, Write};
 use termion::event::*;
 use termion::input::TermRead;
@@ -18,21 +18,18 @@ enum Mode {
 
 fn main() {
     let stdin = io::stdin();
-    let mut stdout = get_screen();
+    let mut screen = &screen();
 
-    let screen_size = stdout.size();
-    let mut window = Frame::new(&mut stdout, (0, 0), (screen_size.0, screen_size.1 - 1));
-
-    // TODO
-    let mut stdout2 = get_screen();
-    let mut status_bar = Frame::new(&mut stdout2, (0, screen_size.1 - 1), (screen_size.0, 1));
+    let screen_size = screen.size();
+    let mut window = Frame::new(screen, (0, 0), (screen_size.0, screen_size.1 - 1));
+    let mut status_bar = Frame::new(screen, (0, screen_size.1), (screen_size.0, 1));
 
     let mut sheet = Sheet::blank();
     let mut mode = Mode::Nav;
 
     draw(&mut window, &sheet);
     StatusBar::draw(&mut status_bar, &sheet);
-    window.flush().unwrap();
+    window.flush();
 
     for c in stdin.keys() {
         let evt = c.unwrap();
@@ -86,12 +83,16 @@ fn main() {
 
         draw(&mut window, &sheet);
         StatusBar::draw(&mut status_bar, &sheet);
-        window.flush().unwrap();
+        window.flush();
     }
 
-    write!(stdout, "{}", termion::cursor::Show).unwrap();
+    write!(screen, "{}", termion::cursor::Show)
 }
 
 // Shortcuts
 //  q - quit
+//  = - edit
+//
+//  wasd - scroll
+//  arrow keys - move selection
 //

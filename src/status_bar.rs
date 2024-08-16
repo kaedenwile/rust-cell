@@ -13,8 +13,7 @@ impl StatusBar {
             "{}{}",
             color::Bg(color::LightBlue),
             color::Fg(color::Black)
-        )
-            .unwrap();
+        );
 
         let cursor_string = format!(
             "Cursor: {}",
@@ -35,7 +34,6 @@ impl StatusBar {
                     "{}",
                     chars.nth(x as usize).unwrap_or(' ').to_string()
                 )
-                    .unwrap();
             }
         }
     }
