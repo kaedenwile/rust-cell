@@ -10,7 +10,7 @@ pub trait Window {
     fn size(&self) -> (u16, u16);
 
     // move cursor within the window
-    fn go_to(&mut self, x: u16, y: u16);
+    fn go_to(&self, x: u16, y: u16);
 
     fn write_fmt(&self, fmt: Arguments<'_>);
 
@@ -45,7 +45,7 @@ impl Window for Screen {
         (cols, rows)
     }
 
-    fn go_to(&mut self, x: u16, y: u16) {
+    fn go_to(&self, x: u16, y: u16) {
         write!(self, "{}", termion::cursor::Goto(x, y));
     }
 
@@ -80,7 +80,7 @@ impl Window for Frame<'_> {
         self.size
     }
 
-    fn go_to(&mut self, x: u16, y: u16) {
+    fn go_to(&self, x: u16, y: u16) {
         if x == 0 || y == 0 {
             panic!("go_to is 1-based")
         } else if x > self.size.0 || y > self.size.1 {

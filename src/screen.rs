@@ -1,4 +1,4 @@
-use crate::sheet::{Address, Alignment, Cursor, DisplayCell, Sheet};
+use crate::state::{Address, Alignment, Cursor, DisplayCell, State};
 use crate::window::Window;
 use termion::color;
 use termion::style;
@@ -17,12 +17,13 @@ enum Position<'a> {
 }
 
 pub fn draw(
-    window: &mut dyn Window,
-    Sheet {
+    window: &dyn Window,
+    State {
         content,
         cursor,
         scroll,
-    }: &Sheet,
+        ..
+    }: &State,
 ) {
     let (width, height) = window.size();
 
@@ -106,7 +107,7 @@ pub fn draw(
                 BetweenRows(addr, _) | BetweenRows(_, addr) if addr == screen_sel => "━",
                 BetweenRows(..) => "─",
 
-                ColumnHeader(col, text_pos) => &Sheet::col_name(col as u8)
+                ColumnHeader(col, text_pos) => &State::col_name(col as u8)
                     .chars()
                     .nth(text_pos as usize)
                     .unwrap_or(' ')

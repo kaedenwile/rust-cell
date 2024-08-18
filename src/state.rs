@@ -1,12 +1,14 @@
-pub struct Sheet {
+pub struct State {
+    pub mode: Mode,
     pub content: Vec<Vec<DisplayCell>>,
     pub scroll: Address,
     pub cursor: Cursor,
 }
 
-impl Sheet {
+impl State {
     pub fn blank() -> Self {
-        Sheet {
+        State {
+            mode: Mode::Nav,
             content: Vec::new(),
             scroll: (0, 0),
             cursor: Cursor::Single((1, 1)),
@@ -22,7 +24,7 @@ impl Sheet {
         F: Fn(&DisplayCell) -> DisplayCell,
     {
         let mut row = &mut self.get_row(r as usize);
-        let cell = Sheet::get_col(&mut row, c as usize);
+        let cell = State::get_col(&mut row, c as usize);
 
         row[c as usize] = f(cell)
     }
@@ -42,6 +44,11 @@ impl Sheet {
 
         &row[c]
     }
+}
+
+pub enum Mode {
+    Nav,
+    Edit,
 }
 
 pub type Address = (u16, u16);
