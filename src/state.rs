@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 pub struct State {
     pub mode: Mode,
     pub content: Vec<Vec<DisplayCell>>,
@@ -44,6 +46,14 @@ impl State {
 
         &row[c]
     }
+
+    pub fn get_at(&self, (row, col): Address) -> &DisplayCell {
+        &self
+            .content
+            .get(row as usize)
+            .and_then(|x| x.get(col as usize))
+            .unwrap_or(BLANK_CELL.get_or_init(|| DisplayCell::blank()))
+    }
 }
 
 pub enum Mode {
@@ -52,6 +62,8 @@ pub enum Mode {
 }
 
 pub type Address = (u16, u16);
+
+static BLANK_CELL: OnceLock<DisplayCell> = OnceLock::new();
 
 pub struct DisplayCell {
     pub value: String,

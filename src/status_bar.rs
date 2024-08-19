@@ -1,4 +1,4 @@
-use crate::state::{Cursor, DisplayCell, Mode, State};
+use crate::state::{Cursor, Mode, State};
 use crate::window::Window;
 use termion::color;
 use termion::color::Color;
@@ -39,34 +39,20 @@ impl StatusBar {
         }
     }
 
-    pub fn get_status_message(
-        State {
-            mode,
-            content,
-            cursor,
-            ..
-        }: &State,
-    ) -> String {
-        let blank_cell = DisplayCell::blank();
-
-        match mode {
+    pub fn get_status_message(state: &State) -> String {
+        match state.mode {
             Mode::Nav => format!(
                 "Cursor: {}",
-                match cursor {
-                    Cursor::Single((r, c)) => format!("{}{}", r + 1, State::col_name(*c as u8 + 1)),
+                match state.cursor {
+                    Cursor::Single((r, c)) => format!("{}{}", r + 1, State::col_name(c as u8 + 1)),
                     Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
-                    Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(*c as u8 + 1)),
+                    Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
                 }
             ),
             Mode::Edit => format!(
                 "={}",
-                match cursor {
-                    Cursor::Single((r, c)) =>
-                        &content
-                            .get((*r) as usize)
-                            .and_then(|x| x.get((*c) as usize))
-                            .unwrap_or(&blank_cell)
-                            .value,
+                match state.cursor {
+                    Cursor::Single(addr) => &state.get_at(addr).value,
                     _ => panic!("Editing with non-single select!"),
                 }
             ),

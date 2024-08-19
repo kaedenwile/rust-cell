@@ -16,15 +16,8 @@ enum Position<'a> {
     InsideCell(Address, &'a DisplayCell, u16),
 }
 
-pub fn draw(
-    window: &dyn Window,
-    State {
-        content,
-        cursor,
-        scroll,
-        ..
-    }: &State,
-) {
+pub fn draw(window: &dyn Window, state: &State) {
+    let State { cursor, scroll, .. } = state;
     let (width, height) = window.size();
 
     let screen_sel = match cursor {
@@ -32,8 +25,6 @@ pub fn draw(
         Cursor::Row(r) => (*r + 1, 0),
         Cursor::Column(c) => (0, *c + 1),
     };
-
-    let blank_cell = DisplayCell::blank();
 
     for y in 0..height {
         window.go_to(1, y + 1);
@@ -79,11 +70,7 @@ pub fn draw(
             } else if x < 3 {
                 RowHeader(row, text_pos)
             } else {
-                let cell = content
-                    .get((row - 1) as usize)
-                    .and_then(|x| x.get((col - 1) as usize))
-                    .unwrap_or_else(|| &blank_cell);
-
+                let cell = state.get_at((row - 1, col - 1));
                 InsideCell((row, col), cell, text_pos)
             };
 
