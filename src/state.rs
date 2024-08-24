@@ -67,6 +67,8 @@ static BLANK_CELL: OnceLock<DisplayCell> = OnceLock::new();
 
 pub struct DisplayCell {
     pub value: String,
+    pub computed: String,
+    pub error: bool,
     pub alignment: Alignment,
 }
 
@@ -74,6 +76,8 @@ impl DisplayCell {
     pub fn new(value: String) -> Self {
         DisplayCell {
             value,
+            computed: "".to_string(),
+            error: false,
             alignment: Alignment::Left,
         }
     }

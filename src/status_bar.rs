@@ -44,7 +44,16 @@ impl StatusBar {
             Mode::Nav => format!(
                 "Cursor: {}",
                 match state.cursor {
-                    Cursor::Single((r, c)) => format!("{}{}", r + 1, State::col_name(c as u8 + 1)),
+                    Cursor::Single((r, c)) => {
+                        let cell = state.get_at((r, c));
+                        format!(
+                            "{}{}\tERR:{}\t{}",
+                            r + 1,
+                            State::col_name(c as u8 + 1),
+                            cell.error,
+                            cell.computed
+                        )
+                    }
                     Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
                     Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
                 }

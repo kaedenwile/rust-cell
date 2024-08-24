@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use termion::event::*;
 use termion::input::TermRead;
 
+mod compute;
 mod screen;
 mod state;
 mod status_bar;
@@ -20,6 +21,7 @@ fn main() {
     let mut status_bar = Frame::new(screen, (0, screen_size.1), (screen_size.0, 1));
 
     let mut state = State::blank();
+    state.edit_at((2, 2), |_| DisplayCell::new("1 * ( 2 + 3 )".to_string()));
 
     draw(&mut window, &state);
     StatusBar::draw(&mut status_bar, &state);
@@ -75,6 +77,7 @@ fn main() {
             }
         }
 
+        compute::compute(&mut state);
         draw(&mut window, &state);
         StatusBar::draw(&mut status_bar, &state);
         window.flush();

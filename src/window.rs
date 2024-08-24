@@ -19,15 +19,14 @@ pub trait Window {
 
 // The base screen object
 pub struct Screen {
-    inner: RefCell<AlternateScreen<RawTerminal<Stdout>>>,
+    inner: RefCell<RawTerminal<Stdout>>,
+    // inner: RefCell<AlternateScreen<RawTerminal<Stdout>>>,
 }
 
 pub fn screen() -> Screen {
-    let mut terminal = stdout()
-        .into_raw_mode()
-        .unwrap()
-        .into_alternate_screen()
-        .unwrap();
+    let mut terminal = stdout().into_raw_mode().unwrap();
+    // .into_alternate_screen()
+    // .unwrap();
 
     write!(terminal, "{}", termion::cursor::Hide).unwrap();
 
