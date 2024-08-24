@@ -75,7 +75,6 @@ fn reduce_paren_stack(terms: Vec<String>) -> Result<ParenStack, String> {
             _ => panic!("Internal err!"),
         }
     }
-    ;
 
     for term in terms.into_iter() {
         match term.trim() {
@@ -96,161 +95,159 @@ fn reduce_paren_stack(terms: Vec<String>) -> Result<ParenStack, String> {
         return Err("Unmatched opening paren".to_string());
     }
 
-    // drop(terms);
     Ok(root)
 }
 
-// fn make_node<'a>(raw_terms: Vec<ParenStack>) -> Result<&'a Node<'a>, String> {
-//     enum Computed<'a> {
-//         Computed(&'a Node<'a>),
-//         Raw(&'a String),
-//     }
-//
-//     // Reduce parentheses and parse numbers
-//     let mut terms: Vec<Computed> = Vec::new();
-//     for x in raw_terms.into_iter() {
-//         terms.push(match x {
-//             ParenStack::Term(term) => match term.parse::<f32>() {
-//                 Ok(f) => Computed::Computed(&Node::Literal(f)),
-//                 Err(_) => Computed::Raw(term),
-//             },
-//             ParenStack::Parens(terms) => Computed::Computed(match make_node(terms) {
-//                 Ok(node) => node,
-//                 Err(e) => return Err(e),
-//             }),
-//         })
-//     }
-//
-//     // Reduce multiplication and division
-//     let mut cursor: usize = 0;
-//     while cursor < terms.len() {
-//         let op = match terms[cursor] {
-//             Computed::Raw(op) if op == "*" || op == "/" => op,
-//             _ => {
-//                 cursor += 1;
-//                 continue;
-//             }
-//         };
-//
-//         if cursor < 1 || cursor >= terms.len() - 1 {
-//             return Err("Multiplication or division at boundary".to_string());
-//         }
-//
-//         let prev = match terms.remove(cursor - 1) {
-//             Computed::Raw(_) => return Err("Bad multiplication after raw".to_string()),
-//             Computed::Computed(node) => node,
-//         };
-//         let next = match terms.remove(cursor) {
-//             Computed::Raw(_) => return Err("Bad multiplication before raw".to_string()),
-//             Computed::Computed(node) => node,
-//         };
-//
-//         terms[cursor - 1] = Computed::Computed(&Node::BinaryOp(
-//             match op.as_str() {
-//                 "*" => BinaryOp::Multiply,
-//                 "/" => BinaryOp::Divide,
-//                 _ => panic!("Internal err"),
-//             },
-//             prev,
-//             next,
-//         ));
-//     }
-//
-//     // Reduce addition and subtraction
-//     cursor = 0;
-//     while cursor < terms.len() {
-//         let op = match terms[cursor] {
-//             Computed::Raw(op) if op == "+" || op == "-" => op,
-//             _ => {
-//                 cursor += 1;
-//                 continue;
-//             }
-//         };
-//
-//         if cursor < 1 || cursor >= terms.len() - 1 {
-//             return Err("Addition or Subtraction at boundary".to_string());
-//         }
-//
-//         let prev = match terms.remove(cursor - 1) {
-//             Computed::Raw(_) => return Err("Bad addition after raw".to_string()),
-//             Computed::Computed(node) => node,
-//         };
-//         let next = match terms.remove(cursor) {
-//             Computed::Raw(_) => return Err("Bad addition before raw".to_string()),
-//             Computed::Computed(node) => node,
-//         };
-//
-//         terms[cursor - 1] = Computed::Computed(&Node::BinaryOp(
-//             match op.as_str() {
-//                 "+" => BinaryOp::Add,
-//                 "-" => BinaryOp::Subtract,
-//                 _ => panic!("Internal err"),
-//             },
-//             &prev,
-//             &next,
-//         ));
-//     }
-//
-//     if terms.len() != 1 {
-//         Err("Could not fully reduce".to_string())
-//     } else {
-//         match &terms[0] {
-//             Computed::Raw(_) => Err("Could not reduce from raw".to_string()),
-//             Computed::Computed(node) => Ok(node),
-//         }
-//     }
-//
-//     // let mut current_term = String::from("");
-//     // let mut root: Some<Node> = None;
-//     //
-//     // for (i, char) in cell.chars().enumerate() {
-//     //     match char {
-//     //         // UNARY OPS
-//     //         '-' if current_term.is_empty() => {
-//     //             return match parse(&cell[i..]) {
-//     //                 Ok(x) => Ok(Node::UnaryOp(UnaryOp::Negative, x)),
-//     //                 Err(e) => Err(e),
-//     //             }
-//     //         }
-//     //         // BINARY OPS
-//     //         '+' | '-' | '*' | '/' => {
-//     //             let float = match current_term.parse::<f32>() {
-//     //                 Ok(x) => x,
-//     //                 Err(e) => return Err(e),
-//     //             };
-//     //
-//     //             let op = match char {
-//     //                 '+' => BinaryOp::Add,
-//     //                 '-' => BinaryOp::Subtract,
-//     //                 '*' => BinaryOp::Multiply,
-//     //                 '/' => BinaryOp::Divide,
-//     //                 _ => panic!("Bad binary operator"),
-//     //             };
-//     //
-//     //             return match parse(&cell[i..]) {
-//     //                 Ok(x) => Ok(Node::BinaryOp(op, Node::Literal(float), x)),
-//     //                 Err(e) => Err(e),
-//     //             };
-//     //         }
-//     //         '(' => {
-//     //             if current_term == "SUM" || current_term == "AVG" {
-//     //                 // parse function args
-//     //             } else {
-//     //                 // parens
-//     //             }
-//     //         }
-//     //
-//     //         // ignore whitespace
-//     //         ' ' => {}
-//     //
-//     //         //
-//     //         _ => current_term.push(char),
-//     //     }
-//     // }
-// }
+fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
+    enum Computed {
+        Computed(Node),
+        Raw(String),
+    }
 
-// fn parse(cell: &str) -> Result<&Node, String> {
-fn parse(cell: &str) -> Result<ParenStack, String> {
+    // Reduce parentheses and parse numbers
+    let mut terms: Vec<Computed> = Vec::new();
+    for x in raw_terms.into_iter() {
+        terms.push(match x {
+            ParenStack::Term(term) => match term.parse::<f32>() {
+                Ok(f) => Computed::Computed(Node::Literal(f)),
+                Err(_) => Computed::Raw(term),
+            },
+            ParenStack::Parens(terms) => Computed::Computed(match make_node(terms) {
+                Ok(node) => node,
+                Err(e) => return Err(e),
+            }),
+        })
+    }
+
+    // Reduce multiplication and division
+    let mut cursor: usize = 0;
+    while cursor < terms.len() {
+        let op = match &terms[cursor] {
+            Computed::Raw(op) if op == "*" || op == "/" => op.to_string(),
+            _ => {
+                cursor += 1;
+                continue;
+            }
+        };
+
+        if cursor < 1 || cursor >= terms.len() - 1 {
+            return Err("Multiplication or division at boundary".to_string());
+        }
+
+        let prev = match terms.remove(cursor - 1) {
+            Computed::Raw(_) => return Err("Bad multiplication after raw".to_string()),
+            Computed::Computed(node) => node,
+        };
+        let next = match terms.remove(cursor) {
+            Computed::Raw(_) => return Err("Bad multiplication before raw".to_string()),
+            Computed::Computed(node) => node,
+        };
+
+        terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
+            match op.as_str() {
+                "*" => BinaryOp::Multiply,
+                "/" => BinaryOp::Divide,
+                _ => panic!("Internal err"),
+            },
+            Box::new(prev),
+            Box::new(next),
+        ));
+    }
+
+    // Reduce addition and subtraction
+    cursor = 0;
+    while cursor < terms.len() {
+        let op = match &terms[cursor] {
+            Computed::Raw(op) if op == "+" || op == "-" => op.to_string(),
+            _ => {
+                cursor += 1;
+                continue;
+            }
+        };
+
+        if cursor < 1 || cursor >= terms.len() - 1 {
+            return Err("Addition or Subtraction at boundary".to_string());
+        }
+
+        let prev = match terms.remove(cursor - 1) {
+            Computed::Raw(_) => return Err("Bad addition after raw".to_string()),
+            Computed::Computed(node) => node,
+        };
+        let next = match terms.remove(cursor) {
+            Computed::Raw(_) => return Err("Bad addition before raw".to_string()),
+            Computed::Computed(node) => node,
+        };
+
+        terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
+            match op.as_str() {
+                "+" => BinaryOp::Add,
+                "-" => BinaryOp::Subtract,
+                _ => panic!("Internal err"),
+            },
+            Box::new(prev),
+            Box::new(next),
+        ));
+    }
+
+    if (&terms).len() != 1 {
+        Err("Could not fully reduce".to_string())
+    } else {
+        match terms.into_iter().next().unwrap() {
+            Computed::Raw(_) => Err("Could not reduce from raw".to_string()),
+            Computed::Computed(node) => Ok(node),
+        }
+    }
+
+    // let mut current_term = String::from("");
+    // let mut root: Some<Node> = None;
+    //
+    // for (i, char) in cell.chars().enumerate() {
+    //     match char {
+    //         // UNARY OPS
+    //         '-' if current_term.is_empty() => {
+    //             return match parse(&cell[i..]) {
+    //                 Ok(x) => Ok(Node::UnaryOp(UnaryOp::Negative, x)),
+    //                 Err(e) => Err(e),
+    //             }
+    //         }
+    //         // BINARY OPS
+    //         '+' | '-' | '*' | '/' => {
+    //             let float = match current_term.parse::<f32>() {
+    //                 Ok(x) => x,
+    //                 Err(e) => return Err(e),
+    //             };
+    //
+    //             let op = match char {
+    //                 '+' => BinaryOp::Add,
+    //                 '-' => BinaryOp::Subtract,
+    //                 '*' => BinaryOp::Multiply,
+    //                 '/' => BinaryOp::Divide,
+    //                 _ => panic!("Bad binary operator"),
+    //             };
+    //
+    //             return match parse(&cell[i..]) {
+    //                 Ok(x) => Ok(Node::BinaryOp(op, Node::Literal(float), x)),
+    //                 Err(e) => Err(e),
+    //             };
+    //         }
+    //         '(' => {
+    //             if current_term == "SUM" || current_term == "AVG" {
+    //                 // parse function args
+    //             } else {
+    //                 // parens
+    //             }
+    //         }
+    //
+    //         // ignore whitespace
+    //         ' ' => {}
+    //
+    //         //
+    //         _ => current_term.push(char),
+    //     }
+    // }
+}
+
+fn parse(cell: &str) -> Result<Node, String> {
     // STEP 1: SPLIT STRING INTO TERMS
     let terms = split_into_terms(cell);
 
@@ -265,20 +262,18 @@ fn parse(cell: &str) -> Result<ParenStack, String> {
         Err(e) => return Err(e),
     };
 
-    Ok(paren_stack)
-    //
-    // let mut terms = match paren_stack {
-    //     ParenStack::Parens(terms) => terms,
-    //     _ => panic!("Internal err"),
-    // };
-    // make_node(terms)
+    let mut terms = match paren_stack {
+        ParenStack::Parens(terms) => terms,
+        _ => panic!("Internal err"),
+    };
+    make_node(terms)
 }
 
 #[derive(Debug)]
-enum Node<'a> {
+enum Node {
     Literal(f32),
     // UnaryOp(UnaryOp, Node),
-    BinaryOp(BinaryOp, &'a Node<'a>, &'a Node<'a>),
+    BinaryOp(BinaryOp, Box<Node>, Box<Node>),
     // Function(Function, Vec<Node>),
     // Reference(String),
 }
