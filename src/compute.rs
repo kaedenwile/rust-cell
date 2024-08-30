@@ -38,8 +38,8 @@ fn split_into_terms(cell: &str) -> Vec<String> {
             _ => current_term.push(char),
         }
     }
-    if !current_term.is_empty() {
-        terms.push(current_term);
+    if !current_term.trim().is_empty() {
+        terms.push(current_term.trim().to_string());
     }
 
     terms
@@ -50,17 +50,30 @@ enum ParenStack {
     Term(String),
     Parens(Vec<ParenStack>),
 }
+
+// Needed for unit tests
+impl PartialEq for ParenStack {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            ParenStack::Term(term) => match other {
+                ParenStack::Term(oterm) => term == oterm,
+                ParenStack::Parens(_) => false,
+            },
+            ParenStack::Parens(terms) => match other {
+                ParenStack::Term(_) => false,
+                ParenStack::Parens(oterms) => terms == oterms,
+            },
+        }
+    }
+}
+
 fn reduce_paren_stack(terms: Vec<String>) -> Result<ParenStack, String> {
     let mut root = ParenStack::Parens(Vec::new());
     let mut depth = 0;
 
     fn push(root: &mut ParenStack, depth: i32, term: ParenStack) {
-        print!("TERM={:?}", term);
-
         let mut target = root;
-        for i in 0..depth {
-            print!("\tSTEP 123 i={} depth={} {:?}", i, depth, target);
-
+        for _ in 0..depth {
             match target {
                 ParenStack::Parens(ref mut vec) => {
                     target = vec.last_mut().unwrap();
@@ -69,7 +82,6 @@ fn reduce_paren_stack(terms: Vec<String>) -> Result<ParenStack, String> {
             }
         }
 
-        println!("\tPUSHING {:?}", target);
         match target {
             ParenStack::Parens(ref mut vec) => vec.push(term),
             _ => panic!("Internal err!"),
@@ -119,74 +131,62 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
         })
     }
 
-    // Reduce multiplication and division
-    let mut cursor: usize = 0;
-    while cursor < terms.len() {
-        let op = match &terms[cursor] {
-            Computed::Raw(op) if op == "*" || op == "/" => op.to_string(),
-            _ => {
-                cursor += 1;
-                continue;
+    fn reduce_binary<F>(terms: &mut Vec<Computed>, f: F) -> Result<(), String>
+    where
+        F: Fn(&str) -> Option<BinaryOp>,
+    {
+        let mut cursor: usize = 0;
+        while cursor < terms.len() {
+            let op = match &terms[cursor] {
+                Computed::Raw(op) if f(op).is_some() => op.to_string(),
+                _ => {
+                    cursor += 1;
+                    continue;
+                }
+            };
+
+            if cursor < 1 || cursor >= terms.len() - 1 {
+                return Err("BinaryOp at boundary".to_string());
             }
-        };
 
-        if cursor < 1 || cursor >= terms.len() - 1 {
-            return Err("Multiplication or division at boundary".to_string());
+            let prev = match terms.remove(cursor - 1) {
+                Computed::Raw(_) => return Err("Bad multiplication after raw".to_string()),
+                Computed::Computed(node) => node,
+            };
+            let next = match terms.remove(cursor) {
+                Computed::Raw(_) => return Err("Bad multiplication before raw".to_string()),
+                Computed::Computed(node) => node,
+            };
+
+            terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
+                match op.as_str() {
+                    "*" => BinaryOp::Multiply,
+                    "/" => BinaryOp::Divide,
+                    _ => panic!("Internal err"),
+                },
+                Box::new(prev),
+                Box::new(next),
+            ));
         }
+        Ok(())
+    }
 
-        let prev = match terms.remove(cursor - 1) {
-            Computed::Raw(_) => return Err("Bad multiplication after raw".to_string()),
-            Computed::Computed(node) => node,
-        };
-        let next = match terms.remove(cursor) {
-            Computed::Raw(_) => return Err("Bad multiplication before raw".to_string()),
-            Computed::Computed(node) => node,
-        };
-
-        terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
-            match op.as_str() {
-                "*" => BinaryOp::Multiply,
-                "/" => BinaryOp::Divide,
-                _ => panic!("Internal err"),
-            },
-            Box::new(prev),
-            Box::new(next),
-        ));
+    // Reduce multiplication and division
+    if let Err(e) = reduce_binary(&mut terms, |op| match op {
+        "*" => Some(BinaryOp::Multiply),
+        "/" => Some(BinaryOp::Divide),
+        _ => None,
+    }) {
+        return Err(e);
     }
 
     // Reduce addition and subtraction
-    cursor = 0;
-    while cursor < terms.len() {
-        let op = match &terms[cursor] {
-            Computed::Raw(op) if op == "+" || op == "-" => op.to_string(),
-            _ => {
-                cursor += 1;
-                continue;
-            }
-        };
-
-        if cursor < 1 || cursor >= terms.len() - 1 {
-            return Err("Addition or Subtraction at boundary".to_string());
-        }
-
-        let prev = match terms.remove(cursor - 1) {
-            Computed::Raw(_) => return Err("Bad addition after raw".to_string()),
-            Computed::Computed(node) => node,
-        };
-        let next = match terms.remove(cursor) {
-            Computed::Raw(_) => return Err("Bad addition before raw".to_string()),
-            Computed::Computed(node) => node,
-        };
-
-        terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
-            match op.as_str() {
-                "+" => BinaryOp::Add,
-                "-" => BinaryOp::Subtract,
-                _ => panic!("Internal err"),
-            },
-            Box::new(prev),
-            Box::new(next),
-        ));
+    if let Err(e) = reduce_binary(&mut terms, |op| match op {
+        "+" => Some(BinaryOp::Add),
+        "-" => Some(BinaryOp::Subtract),
+        _ => None,
+    }) {
+        return Err(e);
     }
 
     if (&terms).len() != 1 {
@@ -197,57 +197,19 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
             Computed::Computed(node) => Ok(node),
         }
     }
-
-    // let mut current_term = String::from("");
-    // let mut root: Some<Node> = None;
-    //
-    // for (i, char) in cell.chars().enumerate() {
-    //     match char {
-    //         // UNARY OPS
-    //         '-' if current_term.is_empty() => {
-    //             return match parse(&cell[i..]) {
-    //                 Ok(x) => Ok(Node::UnaryOp(UnaryOp::Negative, x)),
-    //                 Err(e) => Err(e),
-    //             }
-    //         }
-    //         // BINARY OPS
-    //         '+' | '-' | '*' | '/' => {
-    //             let float = match current_term.parse::<f32>() {
-    //                 Ok(x) => x,
-    //                 Err(e) => return Err(e),
-    //             };
-    //
-    //             let op = match char {
-    //                 '+' => BinaryOp::Add,
-    //                 '-' => BinaryOp::Subtract,
-    //                 '*' => BinaryOp::Multiply,
-    //                 '/' => BinaryOp::Divide,
-    //                 _ => panic!("Bad binary operator"),
-    //             };
-    //
-    //             return match parse(&cell[i..]) {
-    //                 Ok(x) => Ok(Node::BinaryOp(op, Node::Literal(float), x)),
-    //                 Err(e) => Err(e),
-    //             };
-    //         }
-    //         '(' => {
-    //             if current_term == "SUM" || current_term == "AVG" {
-    //                 // parse function args
-    //             } else {
-    //                 // parens
-    //             }
-    //         }
-    //
-    //         // ignore whitespace
-    //         ' ' => {}
-    //
-    //         //
-    //         _ => current_term.push(char),
-    //     }
-    // }
 }
 
-fn parse(cell: &str) -> Result<Node, String> {
+fn compute_node(node: Node) -> f32 {
+    match node {
+        Node::Literal(num) => num,
+        Node::BinaryOp(BinaryOp::Add, x, y) => compute_node(*x) + compute_node(*y),
+        Node::BinaryOp(BinaryOp::Subtract, x, y) => compute_node(*x) - compute_node(*y),
+        Node::BinaryOp(BinaryOp::Multiply, x, y) => compute_node(*x) * compute_node(*y),
+        Node::BinaryOp(BinaryOp::Divide, x, y) => compute_node(*x) / compute_node(*y),
+    }
+}
+
+fn parse(cell: &str) -> Result<String, String> {
     // STEP 1: SPLIT STRING INTO TERMS
     let terms = split_into_terms(cell);
 
@@ -262,11 +224,15 @@ fn parse(cell: &str) -> Result<Node, String> {
         Err(e) => return Err(e),
     };
 
-    let mut terms = match paren_stack {
+    let terms = match paren_stack {
         ParenStack::Parens(terms) => terms,
         _ => panic!("Internal err"),
     };
-    make_node(terms)
+
+    match make_node(terms) {
+        Ok(node) => Ok(compute_node(node).to_string()),
+        Err(err) => Err(err),
+    }
 }
 
 #[derive(Debug)]
@@ -294,4 +260,80 @@ enum Function {
     Sum,
     Avg,
     Pow,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! paren {
+        ( $( $x:expr ),+ ) => {{
+            let mut v = Vec::new();
+
+            $(
+                v.push(term!($x));
+            )*
+
+            ParenStack::Parens(v)
+        }};
+    }
+
+    macro_rules! term {
+        ( $val:literal ) => {
+            ParenStack::Term($val.to_string())
+        };
+        ( $x:expr  ) => {
+            $x
+        };
+    }
+
+    #[test]
+    fn test_split_into_terms() {
+        assert_eq!(split_into_terms("123"), vec!["123"]);
+        assert_eq!(
+            split_into_terms("1 + 2 * 3 - 4 / 5"),
+            vec!["1", "+", "2", "*", "3", "-", "4", "/", "5"]
+        );
+        assert_eq!(
+            split_into_terms("( 1.5 * (1.2 - B3 ) + A4)"),
+            vec!["(", "1.5", "*", "(", "1.2", "-", "B3", ")", "+", "A4", ")"]
+        );
+    }
+
+    #[test]
+    fn test_reduce_paren_stack() {
+        let reduce_paren_stack =
+            |v: Vec<&str>| reduce_paren_stack(v.iter().map(|s| s.to_string()).collect());
+
+        assert_eq!(
+            reduce_paren_stack(vec!["1", "+", "2"]),
+            Ok(paren!("1", "+", "2")) // Ok(ParenStack::Parens(vec![term("1"), term("+"), term("2")]))
+        );
+
+        assert_eq!(
+            reduce_paren_stack(vec!["3", "*", "(", "1", "+", "2", ")"]),
+            Ok(paren!("3", "*", paren!("1", "+", "2")))
+        );
+
+        assert_eq!(
+            reduce_paren_stack(vec![
+                "(", "B4", "-", "(", "C4", "/", "A2", ")", ")", "*", "(", "1", "+", "2", ")"
+            ]),
+            Ok(paren!(
+                paren!("B4", "-", paren!("C4", "/", "A2")),
+                "*",
+                paren!("1", "+", "2")
+            ))
+        );
+
+        assert_eq!(
+            reduce_paren_stack(vec!["3", "*", "(", "1", "+", "2"]),
+            Err("Unmatched opening paren".to_string())
+        );
+
+        assert_eq!(
+            reduce_paren_stack(vec!["3", "*", "(", "1", "+", "2", ")", ")"]),
+            Err("Unmatched closing paren".to_string())
+        );
+    }
 }
