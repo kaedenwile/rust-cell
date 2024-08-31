@@ -11,7 +11,7 @@ pub fn compute(state: &mut State) {
             match node {
                 Ok(node) => {
                     cell.error = false;
-                    cell.computed = format!("{:?}", node);
+                    cell.computed = format!("{}", node);
                 }
                 Err(e) => {
                     cell.error = true;

@@ -2,7 +2,7 @@ use crate::screen::draw;
 use crate::state::{Cursor, DisplayCell, Mode, State};
 use crate::status_bar::StatusBar;
 use crate::window::{screen, Frame, Window};
-use std::io::{self, Write};
+use std::io;
 use termion::event::*;
 use termion::input::TermRead;
 
@@ -14,14 +14,15 @@ mod window;
 
 fn main() {
     let stdin = io::stdin();
-    let mut screen = &screen();
+    let screen = &screen();
 
     let screen_size = screen.size();
     let mut window = Frame::new(screen, (0, 0), (screen_size.0, screen_size.1 - 1));
     let mut status_bar = Frame::new(screen, (0, screen_size.1), (screen_size.0, 1));
 
     let mut state = State::blank();
-    state.edit_at((2, 2), |_| DisplayCell::new("1 * ( 2 + 3 )".to_string()));
+    state.edit_at((2, 2), |_| DisplayCell::new("4 * ( 2 + 3 )".to_string()));
+    compute::compute(&mut state);
 
     draw(&mut window, &state);
     StatusBar::draw(&mut status_bar, &state);

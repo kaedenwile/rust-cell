@@ -47,7 +47,7 @@ impl StatusBar {
                     Cursor::Single((r, c)) => {
                         let cell = state.get_at((r, c));
                         format!(
-                            "{}{}\tERR:{}\t{}",
+                            "{}{} ERR:{} {}",
                             r + 1,
                             State::col_name(c as u8 + 1),
                             cell.error,

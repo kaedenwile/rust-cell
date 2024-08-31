@@ -1,8 +1,8 @@
 use std::cell::RefCell;
-use std::fmt::{Arguments, Debug, Pointer};
-use std::io::{stdout, Stdout, Write};
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::screen::{AlternateScreen, IntoAlternateScreen};
+use std::fmt::Arguments;
+use std::io::{stdout, Write};
+use termion::raw::IntoRawMode;
+use termion::screen::IntoAlternateScreen;
 
 // A rectangle that can be written to
 pub trait Window {
@@ -19,19 +19,20 @@ pub trait Window {
 
 // The base screen object
 pub struct Screen {
-    inner: RefCell<RawTerminal<Stdout>>,
-    // inner: RefCell<AlternateScreen<RawTerminal<Stdout>>>,
+    inner: RefCell<Box<dyn Write>>,
 }
 
 pub fn screen() -> Screen {
-    let mut terminal = stdout().into_raw_mode().unwrap();
-    // .into_alternate_screen()
-    // .unwrap();
+    let mut terminal = stdout()
+        .into_raw_mode()
+        .unwrap()
+        .into_alternate_screen()
+        .unwrap();
 
     write!(terminal, "{}", termion::cursor::Hide).unwrap();
 
     Screen {
-        inner: RefCell::new(terminal),
+        inner: RefCell::new(Box::new(terminal)),
     }
 }
 

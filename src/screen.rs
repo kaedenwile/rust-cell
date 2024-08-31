@@ -1,4 +1,4 @@
-use crate::state::{Address, Alignment, Cursor, DisplayCell, State};
+use crate::state::{Address, Alignment, Cursor, DisplayCell, Mode, State};
 use crate::window::Window;
 use termion::color;
 use termion::style;
@@ -108,7 +108,12 @@ pub fn draw(window: &dyn Window, state: &State) {
                     .to_string(),
 
                 InsideCell(_, cell, text_pos) => {
-                    let mut chars = cell.value.chars();
+                    let mut chars = match state.mode {
+                        Mode::Nav => &cell.computed,
+                        Mode::Edit => &cell.value,
+                    }
+                    .chars();
+
                     let l = match &cell.alignment {
                         Alignment::Left => chars.nth(text_pos as usize),
                         Alignment::Right => chars.nth_back(6 - text_pos as usize),
