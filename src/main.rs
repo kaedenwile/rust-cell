@@ -35,8 +35,9 @@ fn main() {
             Mode::Nav => match evt {
                 Key::Char('q') => break,
                 Key::Char('=') => {
-                    if let Cursor::Single(_) = state.cursor {
-                        state.mode = Mode::Edit
+                    if let Cursor::Single(addr) = state.cursor {
+                        state.mode = Mode::Edit;
+                        state.edit_cursor = state.get_at(addr).value.len();
                     }
                 }
 
@@ -58,21 +59,55 @@ fn main() {
                 };
 
                 match evt {
-                    Key::Char('\n') => state.mode = Mode::Nav,
-                    Key::Char(l) => state.edit_at(addr, |cell| {
-                        DisplayCell::new(cell.value.clone() + &l.to_string())
-                    }),
-                    Key::Backspace => state.edit_at(addr, |cell| {
-                        let s = cell.value.clone();
+                    Key::Char('\n') | Key::Esc => state.mode = Mode::Nav,
+                    Key::Ctrl('a') => state.edit_cursor = 0,
+                    Key::Ctrl('e') => state.edit_cursor = state.get_at(addr).value.len(),
+                    Key::Alt('f') => {
+                        state.edit_cursor = state.get_at(addr).value[state.edit_cursor..]
+                            .find(" ")
+                            .and_then(|idx| Some(idx + state.edit_cursor + 1))
+                            .unwrap_or(state.get_at(addr).value.len())
+                    }
+                    Key::Alt('b') => {
+                        state.edit_cursor = state.get_at(addr).value[..state.edit_cursor]
+                            .rfind(" ")
+                            .and_then(|idx| if idx == 0 { None } else { Some(idx - 1) })
+                            .unwrap_or(0)
+                    }
 
-                        if s.len() <= 1 {
-                            return DisplayCell::blank();
+                    Key::Char(l) => {
+                        let edit_cursor = state.edit_cursor;
+                        state.edit_at(addr, |cell| {
+                            let mut new_val = cell.value.clone();
+                            new_val.insert(edit_cursor, l);
+                            DisplayCell::new(new_val)
+                        });
+                        state.edit_cursor += 1;
+                    }
+
+                    Key::Backspace => {
+                        let edit_cursor = state.edit_cursor;
+                        state.edit_at(addr, |cell| {
+                            let mut new_val = cell.value.clone();
+
+                            if edit_cursor == 0 {
+                                return DisplayCell::new(new_val);
+                            }
+
+                            new_val.remove(edit_cursor - 1);
+                            DisplayCell::new(new_val)
+                        });
+
+                        if state.edit_cursor > 0 {
+                            state.edit_cursor -= 1;
                         }
+                    }
 
-                        let mut iter = s.char_indices();
-                        let (end, _) = iter.nth_back(1).unwrap();
-                        DisplayCell::new(s[..=end].to_string())
-                    }),
+                    Key::Left if state.edit_cursor > 0 => state.edit_cursor -= 1,
+                    Key::Right if state.edit_cursor < state.get_at(addr).value.len() => {
+                        state.edit_cursor += 1
+                    }
+
                     _ => {}
                 }
             }
@@ -83,8 +118,6 @@ fn main() {
         StatusBar::draw(&mut status_bar, &state);
         window.flush();
     }
-
-    write!(screen, "{}", termion::cursor::Show)
 }
 
 // Shortcuts

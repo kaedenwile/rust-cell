@@ -23,6 +23,25 @@ impl StatusBar {
 
             for x in 0..width {
                 let mut chars = status_message.chars();
+
+                if let Mode::Edit = state.mode {
+                    if x as usize == state.edit_cursor + 1 {
+                        write!(
+                            window,
+                            "{}{}",
+                            color::Bg(color::Black),
+                            color::Fg(color::White)
+                        );
+                    } else if x as usize == state.edit_cursor + 2 {
+                        write!(
+                            window,
+                            "{}{}",
+                            color::Bg(Self::get_color(state)),
+                            color::Fg(color::Black)
+                        );
+                    }
+                }
+
                 write!(
                     window,
                     "{}",
@@ -63,7 +82,7 @@ impl StatusBar {
                 match state.cursor {
                     Cursor::Single(addr) => &state.get_at(addr).value,
                     _ => panic!("Editing with non-single select!"),
-                }
+                },
             ),
         }
     }

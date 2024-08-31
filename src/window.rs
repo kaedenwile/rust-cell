@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::fmt::Arguments;
 use std::io::{stdout, Write};
+use termion::cursor::HideCursor;
 use termion::raw::IntoRawMode;
 use termion::screen::IntoAlternateScreen;
 
@@ -23,13 +24,13 @@ pub struct Screen {
 }
 
 pub fn screen() -> Screen {
-    let mut terminal = stdout()
-        .into_raw_mode()
-        .unwrap()
-        .into_alternate_screen()
-        .unwrap();
-
-    write!(terminal, "{}", termion::cursor::Hide).unwrap();
+    let terminal = HideCursor::from(
+        stdout()
+            .into_raw_mode()
+            .unwrap()
+            .into_alternate_screen()
+            .unwrap(),
+    );
 
     Screen {
         inner: RefCell::new(Box::new(terminal)),

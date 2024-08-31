@@ -5,6 +5,7 @@ pub struct State {
     pub content: Vec<Vec<DisplayCell>>,
     pub scroll: Address,
     pub cursor: Cursor,
+    pub edit_cursor: usize,
 }
 
 impl State {
@@ -14,6 +15,7 @@ impl State {
             content: Vec::new(),
             scroll: (0, 0),
             cursor: Cursor::Single((1, 1)),
+            edit_cursor: 0,
         }
     }
 

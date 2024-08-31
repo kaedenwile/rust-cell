@@ -71,7 +71,7 @@ pub fn draw(window: &dyn Window, state: &State) {
                 RowHeader(row, text_pos)
             } else {
                 let cell = state.get_at((row - 1, col - 1));
-                InsideCell((row, col), cell, text_pos)
+                InsideCell((row - 1, col - 1), cell, text_pos)
             };
 
             let val = match position {
@@ -107,10 +107,15 @@ pub fn draw(window: &dyn Window, state: &State) {
                     .unwrap_or(' ')
                     .to_string(),
 
-                InsideCell(_, cell, text_pos) => {
+                InsideCell(cell_addr, cell, text_pos) => {
+                    let is_sole_selection = match state.cursor {
+                        Cursor::Single(addr) => addr == cell_addr,
+                        _ => false,
+                    };
+
                     let mut chars = match state.mode {
-                        Mode::Nav => &cell.computed,
-                        Mode::Edit => &cell.value,
+                        Mode::Edit if is_sole_selection => &cell.value,
+                        _ => &cell.computed,
                     }
                     .chars();
 
