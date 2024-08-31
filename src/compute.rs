@@ -45,26 +45,10 @@ fn split_into_terms(cell: &str) -> Vec<String> {
     terms
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ParenStack {
     Term(String),
     Parens(Vec<ParenStack>),
-}
-
-// Needed for unit tests
-impl PartialEq for ParenStack {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            ParenStack::Term(term) => match other {
-                ParenStack::Term(oterm) => term == oterm,
-                ParenStack::Parens(_) => false,
-            },
-            ParenStack::Parens(terms) => match other {
-                ParenStack::Term(_) => false,
-                ParenStack::Parens(oterms) => terms == oterms,
-            },
-        }
-    }
 }
 
 fn reduce_paren_stack(terms: Vec<String>) -> Result<ParenStack, String> {
@@ -159,11 +143,7 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
             };
 
             terms[cursor - 1] = Computed::Computed(Node::BinaryOp(
-                match op.as_str() {
-                    "*" => BinaryOp::Multiply,
-                    "/" => BinaryOp::Divide,
-                    _ => panic!("Internal err"),
-                },
+                f(op.as_str()).unwrap(),
                 Box::new(prev),
                 Box::new(next),
             ));
@@ -235,7 +215,7 @@ fn parse(cell: &str) -> Result<String, String> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Node {
     Literal(f32),
     // UnaryOp(UnaryOp, Node),
@@ -248,7 +228,7 @@ enum UnaryOp {
     Negative,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum BinaryOp {
     Add,
     Subtract,
@@ -334,6 +314,63 @@ mod tests {
         assert_eq!(
             reduce_paren_stack(vec!["3", "*", "(", "1", "+", "2", ")", ")"]),
             Err("Unmatched closing paren".to_string())
+        );
+    }
+
+    #[test]
+    fn test_make_node() {
+        let easy_make_node = |ast: ParenStack| match ast {
+            ParenStack::Term(t) => make_node(vec![ParenStack::Term(t)]),
+            ParenStack::Parens(terms) => make_node(terms),
+        };
+
+        assert_eq!(easy_make_node(paren!("1")), Ok(Node::Literal(1.0)));
+        assert_eq!(
+            easy_make_node(paren!("1", "+", "2")),
+            Ok(Node::BinaryOp(
+                BinaryOp::Add,
+                Box::new(Node::Literal(1.0)),
+                Box::new(Node::Literal(2.0)),
+            ))
+        );
+
+        assert_eq!(
+            easy_make_node(paren!("3", "+", "4", "*", "5")),
+            Ok(Node::BinaryOp(
+                BinaryOp::Add,
+                Box::new(Node::Literal(3.0)),
+                Box::new(Node::BinaryOp(
+                    BinaryOp::Multiply,
+                    Box::new(Node::Literal(4.0)),
+                    Box::new(Node::Literal(5.0)),
+                )),
+            ))
+        );
+
+        assert_eq!(
+            easy_make_node(paren!("3", "*", "4", "+", "5")),
+            Ok(Node::BinaryOp(
+                BinaryOp::Add,
+                Box::new(Node::BinaryOp(
+                    BinaryOp::Multiply,
+                    Box::new(Node::Literal(3.0)),
+                    Box::new(Node::Literal(4.0)),
+                )),
+                Box::new(Node::Literal(5.0)),
+            ))
+        );
+
+        assert_eq!(
+            easy_make_node(paren!(paren!("3", "+", "4"), "*", "5")),
+            Ok(Node::BinaryOp(
+                BinaryOp::Multiply,
+                Box::new(Node::BinaryOp(
+                    BinaryOp::Add,
+                    Box::new(Node::Literal(3.0)),
+                    Box::new(Node::Literal(4.0)),
+                )),
+                Box::new(Node::Literal(5.0)),
+            ))
         );
     }
 }
