@@ -115,7 +115,7 @@ pub fn draw(window: &dyn Window, state: &State) {
 
                     let mut chars = match state.mode {
                         Mode::Edit if is_sole_selection => &cell.value,
-                        _ => &cell.computed,
+                        _ => &cell.computed.display,
                     }
                     .chars();
 

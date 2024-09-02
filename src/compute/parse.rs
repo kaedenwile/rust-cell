@@ -1,24 +1,29 @@
-use crate::state::State;
+use crate::compute::node::*;
 
-pub fn compute(state: &mut State) {
-    for row in state.content.iter_mut() {
-        for cell in row.iter_mut() {
-            if cell.value.is_empty() {
-                continue;
-            }
+// Parse a cell value (string) into a Node
+pub fn parse(cell: &str) -> Result<Node, String> {
+    // STEP 1: SPLIT STRING INTO TERMS
+    let terms = split_into_terms(cell);
 
-            let node = parse(&cell.value.as_str());
-            match node {
-                Ok(node) => {
-                    cell.error = false;
-                    cell.computed = format!("{}", node);
-                }
-                Err(e) => {
-                    cell.error = true;
-                    cell.computed = format!("{}", e);
-                }
-            }
-        }
+    // STEP 2: REDUCE TERMS INTO TREE
+    // order of operations
+    // 2.1 Parens & Functions
+    // 2.2 Mult / Divide
+    // 2.2 Add / Sub
+
+    let paren_stack = match reduce_paren_stack(terms) {
+        Ok(x) => x,
+        Err(e) => return Err(e),
+    };
+
+    let terms = match paren_stack {
+        ParenStack::Parens(terms) => terms,
+        _ => panic!("Internal err"),
+    };
+
+    match make_node(terms) {
+        Ok(node) => Ok(node),
+        Err(err) => Err(err),
     }
 }
 
@@ -100,10 +105,13 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
         Raw(String),
     }
 
-    // Reduce parentheses and parse numbers
+    // Reduce parentheses, parse numbers, parse refs
     let mut terms: Vec<Computed> = Vec::new();
     for x in raw_terms.into_iter() {
         terms.push(match x {
+            ParenStack::Term(term) if resolve_reference(&term).is_ok() => {
+                Computed::Computed(Node::Reference(term))
+            }
             ParenStack::Term(term) => match term.parse::<f32>() {
                 Ok(f) => Computed::Computed(Node::Literal(f)),
                 Err(_) => Computed::Raw(term),
@@ -177,69 +185,6 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
             Computed::Computed(node) => Ok(node),
         }
     }
-}
-
-fn compute_node(node: Node) -> f32 {
-    match node {
-        Node::Literal(num) => num,
-        Node::BinaryOp(BinaryOp::Add, x, y) => compute_node(*x) + compute_node(*y),
-        Node::BinaryOp(BinaryOp::Subtract, x, y) => compute_node(*x) - compute_node(*y),
-        Node::BinaryOp(BinaryOp::Multiply, x, y) => compute_node(*x) * compute_node(*y),
-        Node::BinaryOp(BinaryOp::Divide, x, y) => compute_node(*x) / compute_node(*y),
-    }
-}
-
-fn parse(cell: &str) -> Result<String, String> {
-    // STEP 1: SPLIT STRING INTO TERMS
-    let terms = split_into_terms(cell);
-
-    // STEP 2: REDUCE TERMS INTO TREE
-    // order of operations
-    // 2.1 Parens & Functions
-    // 2.2 Mult / Divide
-    // 2.2 Add / Sub
-
-    let paren_stack = match reduce_paren_stack(terms) {
-        Ok(x) => x,
-        Err(e) => return Err(e),
-    };
-
-    let terms = match paren_stack {
-        ParenStack::Parens(terms) => terms,
-        _ => panic!("Internal err"),
-    };
-
-    match make_node(terms) {
-        Ok(node) => Ok(compute_node(node).to_string()),
-        Err(err) => Err(err),
-    }
-}
-
-#[derive(Debug, PartialEq)]
-enum Node {
-    Literal(f32),
-    // UnaryOp(UnaryOp, Node),
-    BinaryOp(BinaryOp, Box<Node>, Box<Node>),
-    // Function(Function, Vec<Node>),
-    // Reference(String),
-}
-
-enum UnaryOp {
-    Negative,
-}
-
-#[derive(Debug, PartialEq)]
-enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-}
-
-enum Function {
-    Sum,
-    Avg,
-    Pow,
 }
 
 #[cfg(test)]
@@ -335,13 +280,13 @@ mod tests {
         );
 
         assert_eq!(
-            easy_make_node(paren!("3", "+", "4", "*", "5")),
+            easy_make_node(paren!("3", "+", "A2", "*", "5")),
             Ok(Node::BinaryOp(
                 BinaryOp::Add,
                 Box::new(Node::Literal(3.0)),
                 Box::new(Node::BinaryOp(
                     BinaryOp::Multiply,
-                    Box::new(Node::Literal(4.0)),
+                    Box::new(Node::Reference("A2".to_string())),
                     Box::new(Node::Literal(5.0)),
                 )),
             ))
@@ -361,7 +306,7 @@ mod tests {
         );
 
         assert_eq!(
-            easy_make_node(paren!(paren!("3", "+", "4"), "*", "5")),
+            easy_make_node(paren!(paren!("3", "+", "4"), "*", "CC100")),
             Ok(Node::BinaryOp(
                 BinaryOp::Multiply,
                 Box::new(Node::BinaryOp(
@@ -369,7 +314,7 @@ mod tests {
                     Box::new(Node::Literal(3.0)),
                     Box::new(Node::Literal(4.0)),
                 )),
-                Box::new(Node::Literal(5.0)),
+                Box::new(Node::Reference("CC100".to_string())),
             ))
         );
     }

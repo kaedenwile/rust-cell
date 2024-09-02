@@ -69,8 +69,8 @@ impl StatusBar {
                             "{}{} ERR:{} {}",
                             r + 1,
                             State::col_name(c as u8 + 1),
-                            cell.error,
-                            cell.computed
+                            cell.computed.error,
+                            cell.computed.display
                         )
                     }
                     Cursor::Row(r) => format!("{r}:{r}", r = r + 1),

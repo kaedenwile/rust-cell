@@ -56,6 +56,15 @@ impl State {
             .and_then(|x| x.get(col as usize))
             .unwrap_or(BLANK_CELL.get_or_init(|| DisplayCell::blank()))
     }
+
+    pub fn set_at(&mut self, (r, c): Address, cell: DisplayCell) {
+        let row = &mut self.get_row(r as usize);
+        while c as usize >= row.len() {
+            row.push(DisplayCell::blank())
+        }
+
+        row[c as usize] = cell;
+    }
 }
 
 pub enum Mode {
@@ -67,19 +76,55 @@ pub type Address = (u16, u16);
 
 static BLANK_CELL: OnceLock<DisplayCell> = OnceLock::new();
 
-pub struct DisplayCell {
-    pub value: String,
-    pub computed: String,
+#[derive(Clone)]
+pub struct CellComputation {
+    pub is_computed: bool,
     pub error: bool,
+    pub display: String,
+    pub value: Option<f32>,
+}
+
+impl CellComputation {
+    pub fn new() -> Self {
+        CellComputation {
+            is_computed: false,
+            error: false,
+            display: "".to_string(),
+            value: None,
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.is_computed = false;
+    }
+
+    pub fn set_error(&mut self, err: String) {
+        self.is_computed = true;
+        self.error = true;
+        self.display = err;
+        self.value = None;
+    }
+
+    pub fn set_computed(&mut self, value: f32) {
+        self.is_computed = true;
+        self.error = false;
+        self.display = format!("{}", value);
+        self.value = Some(value);
+    }
+}
+
+#[derive(Clone)]
+pub struct DisplayCell {
     pub alignment: Alignment,
+    pub value: String,
+    pub computed: CellComputation,
 }
 
 impl DisplayCell {
     pub fn new(value: String) -> Self {
         DisplayCell {
             value,
-            computed: "".to_string(),
-            error: false,
+            computed: CellComputation::new(),
             alignment: Alignment::Left,
         }
     }
@@ -94,6 +139,7 @@ impl DisplayCell {
     }
 }
 
+#[derive(Clone)]
 pub enum Alignment {
     Left,
     Right,
