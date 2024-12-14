@@ -46,6 +46,9 @@ fn main() {
                     }
                 }
 
+                Key::Ctrl('z') => state.undo(),
+                Key::Ctrl('y') => state.redo(),
+
                 Key::Char('w') if state.scroll.0 > 0 => state.scroll.0 -= 1,
                 Key::Char('a') if state.scroll.1 > 0 => state.scroll.1 -= 1,
                 Key::Char('s') => state.scroll.0 += 1,

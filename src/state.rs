@@ -6,6 +6,9 @@ pub struct State {
     pub scroll: Address,
     pub cursor: Cursor,
     pub edit_cursor: usize,
+
+    pub undo_stack: Vec<Action>,
+    pub redo_stack: Vec<Action>,
 }
 
 impl State {
@@ -16,6 +19,9 @@ impl State {
             scroll: (0, 0),
             cursor: Cursor::Single((1, 1)),
             edit_cursor: 0,
+
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
         }
     }
 
@@ -23,14 +29,28 @@ impl State {
         ((('A' as u8 - 1) + (i % 26)) as char).to_string()
     }
 
+    // Helper function that calls set_at under the hood.
+    // Also updates undo/redo stack
     pub fn edit_at<F>(&mut self, (r, c): Address, f: F)
     where
         F: Fn(&DisplayCell) -> DisplayCell,
     {
         let mut row = &mut self.get_row(r as usize);
-        let cell = State::get_col(&mut row, c as usize);
 
-        row[c as usize] = f(cell)
+        let prev_cell = State::get_col(&mut row, c as usize);
+        let previous_value = prev_cell.value.clone();
+
+        let new_cell = f(prev_cell);
+        let new_value = new_cell.value.clone();
+
+        &self.undo_stack.push(Action {
+            addr: (r, c),
+            previous_value,
+            new_value,
+        });
+        &self.redo_stack.clear();
+
+        self.set_at((r, c), new_cell);
     }
 
     fn get_row(&mut self, r: usize) -> &mut Vec<DisplayCell> {
@@ -59,15 +79,36 @@ impl State {
 
     pub fn set_at(&mut self, (r, c): Address, cell: DisplayCell) {
         let row = &mut self.get_row(r as usize);
-        while c as usize >= row.len() {
-            row.push(DisplayCell::blank())
-        }
-
+        let _ = State::get_col(row, c as usize);
         row[c as usize] = cell;
     }
 
     pub fn clear_at(&mut self, addr: Address) {
         self.set_at(addr, DisplayCell::blank())
+    }
+
+    pub fn undo(&mut self) {
+        let Some(action) = self.undo_stack.pop() else {
+            return;
+        };
+
+        let (r, c) = action.addr;
+        let row = &mut self.get_row(r as usize);
+        row[c as usize].value = action.previous_value.clone();
+
+        self.redo_stack.push(action);
+    }
+
+    pub fn redo(&mut self) {
+        let Some(action) = self.redo_stack.pop() else {
+            return;
+        };
+
+        let (r, c) = action.addr;
+        let row = &mut self.get_row(r as usize);
+        row[c as usize].value = action.new_value.clone();
+
+        self.undo_stack.push(action);
     }
 }
 
@@ -77,6 +118,13 @@ pub enum Mode {
 }
 
 pub type Address = (u16, u16);
+
+#[derive(Debug)]
+pub struct Action {
+    pub addr: Address,
+    pub previous_value: String,
+    pub new_value: String,
+}
 
 static BLANK_CELL: OnceLock<DisplayCell> = OnceLock::new();
 
@@ -100,6 +148,7 @@ impl CellComputation {
 
     pub fn clear(&mut self) {
         self.is_computed = false;
+        self.display = "".to_string();
     }
 
     pub fn set_error(&mut self, err: String) {
