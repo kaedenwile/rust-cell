@@ -113,11 +113,11 @@ pub fn draw(window: &dyn Window, state: &State) {
                         _ => false,
                     };
 
-                    let mut chars = match state.mode {
-                        Mode::Edit if is_sole_selection => &cell.value,
-                        _ => &cell.computed.display,
-                    }
-                    .chars();
+                    let mut content = match state.mode {
+                        Mode::Edit if is_sole_selection => format!("={}", &cell.value),
+                        _ => cell.computed.display.to_string(),
+                    };
+                    let mut chars = content.chars();
 
                     let l = match &cell.alignment {
                         Alignment::Left => chars.nth(text_pos as usize),

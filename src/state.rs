@@ -65,6 +65,10 @@ impl State {
 
         row[c as usize] = cell;
     }
+
+    pub fn clear_at(&mut self, addr: Address) {
+        self.set_at(addr, DisplayCell::blank())
+    }
 }
 
 pub enum Mode {

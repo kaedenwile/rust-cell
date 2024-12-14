@@ -40,6 +40,11 @@ fn main() {
                         state.edit_cursor = state.get_at(addr).value.len();
                     }
                 }
+                Key::Backspace => {
+                    if let Cursor::Single(addr) = state.cursor {
+                        state.clear_at(addr);
+                    }
+                }
 
                 Key::Char('w') if state.scroll.0 > 0 => state.scroll.0 -= 1,
                 Key::Char('a') if state.scroll.1 > 0 => state.scroll.1 -= 1,
