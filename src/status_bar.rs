@@ -55,6 +55,7 @@ impl StatusBar {
         match mode {
             Mode::Nav => &color::LightBlue,
             Mode::Edit => &color::LightGreen,
+            Mode::Save => &color::LightYellow,
         }
     }
 
@@ -78,6 +79,7 @@ impl StatusBar {
                 }
             ),
             Mode::Edit => format!("={}", &state.edit_buffer),
+            Mode::Save => format!("Saving to ./{}", &state.edit_buffer),
         }
     }
 }

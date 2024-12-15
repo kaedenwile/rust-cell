@@ -143,6 +143,7 @@ impl State {
 pub enum Mode {
     Nav,
     Edit,
+    Save,
 }
 
 pub type Address = (u16, u16);

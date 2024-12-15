@@ -1,12 +1,14 @@
+use crate::filesystem::{load, save};
 use crate::screen::draw;
-use crate::state::{Cursor, DisplayCell, Mode, State};
+use crate::state::{Cursor, Mode, State};
 use crate::status_bar::StatusBar;
 use crate::window::{screen, Frame, Window};
-use std::io;
+use std::{env, io};
 use termion::event::*;
 use termion::input::TermRead;
 
 mod compute;
+mod filesystem;
 mod screen;
 mod state;
 mod status_bar;
@@ -20,10 +22,13 @@ fn main() {
     let mut window = Frame::new(screen, (0, 0), (screen_size.0, screen_size.1 - 1));
     let mut status_bar = Frame::new(screen, (0, screen_size.1), (screen_size.0, 1));
 
+    let args: Vec<String> = env::args().collect();
     let mut state = State::blank();
-    state.set_at((2, 2), DisplayCell::new("4 * ( 2 + 3 )".to_string()));
-    compute::bake(&mut state);
+    if args.len() > 1 {
+        state = load(&args[1]);
+    }
 
+    compute::bake(&mut state);
     draw(&mut window, &state);
     StatusBar::draw(&mut status_bar, &state);
     window.flush();
@@ -33,7 +38,15 @@ fn main() {
 
         match state.mode {
             Mode::Nav => match evt {
-                Key::Char('q') => break,
+                Key::Char('q') => break, // Exit
+
+                // Save
+                Key::Ctrl('s') => {
+                    state.mode = Mode::Save;
+                    state.edit_buffer = String::new();
+                    state.edit_cursor = state.edit_buffer.len();
+                }
+
                 Key::Char('=') => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.mode = Mode::Edit;
@@ -94,7 +107,7 @@ fn main() {
 
                     Key::Backspace => {
                         if state.edit_cursor == 0 {
-                            return;
+                            continue;
                         }
                         state.edit_buffer.remove(state.edit_cursor - 1);
                         state.edit_cursor -= 1;
@@ -108,6 +121,28 @@ fn main() {
                     _ => {}
                 }
             }
+            Mode::Save => match evt {
+                Key::Char('\n') => {
+                    save(&state, &state.edit_buffer);
+                    state.mode = Mode::Nav;
+                }
+                Key::Esc => state.mode = Mode::Nav,
+
+                Key::Char(l) => {
+                    state.edit_buffer.insert(state.edit_cursor, l);
+                    state.edit_cursor += 1;
+                }
+
+                Key::Backspace => {
+                    if state.edit_cursor == 0 {
+                        continue;
+                    }
+                    state.edit_buffer.remove(state.edit_cursor - 1);
+                    state.edit_cursor -= 1;
+                }
+
+                _ => {}
+            },
         }
 
         compute::bake(&mut state);
