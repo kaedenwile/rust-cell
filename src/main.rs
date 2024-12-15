@@ -43,7 +43,7 @@ fn main() {
                 // Save
                 Key::Ctrl('s') => {
                     state.mode = Mode::Save;
-                    state.edit_buffer = String::new();
+                    state.edit_buffer = state.filename.clone();
                     state.edit_cursor = state.edit_buffer.len();
                 }
 
@@ -123,6 +123,7 @@ fn main() {
             }
             Mode::Save => match evt {
                 Key::Char('\n') => {
+                    state.filename = state.edit_buffer.clone();
                     save(&state, &state.edit_buffer);
                     state.mode = Mode::Nav;
                 }

@@ -9,6 +9,8 @@ pub struct State {
     pub edit_buffer: String,
     pub edit_cursor: usize,
 
+    pub filename: String,
+
     pub undo_stack: Vec<Action>,
     pub redo_stack: Vec<Action>,
 }
@@ -23,6 +25,8 @@ impl State {
 
             edit_buffer: String::new(),
             edit_cursor: 0,
+
+            filename: String::new(),
 
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),

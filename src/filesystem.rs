@@ -38,5 +38,6 @@ pub fn load(filepath: &str) -> State {
         }
     }
 
+    state.filename = filepath.to_string();
     state
 }
