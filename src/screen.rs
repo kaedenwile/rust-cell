@@ -114,7 +114,7 @@ pub fn draw(window: &dyn Window, state: &State) {
                     };
 
                     let mut content = match state.mode {
-                        Mode::Edit if is_sole_selection => format!("={}", &cell.value),
+                        Mode::Edit if is_sole_selection => format!("={}", state.edit_buffer),
                         _ => cell.computed.display.to_string(),
                     };
                     let mut chars = content.chars();

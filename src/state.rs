@@ -5,6 +5,8 @@ pub struct State {
     pub content: Vec<Vec<DisplayCell>>,
     pub scroll: Address,
     pub cursor: Cursor,
+
+    pub edit_buffer: String,
     pub edit_cursor: usize,
 
     pub undo_stack: Vec<Action>,
@@ -18,6 +20,8 @@ impl State {
             content: Vec::new(),
             scroll: (0, 0),
             cursor: Cursor::Single((1, 1)),
+
+            edit_buffer: String::new(),
             edit_cursor: 0,
 
             undo_stack: Vec::new(),
@@ -27,6 +31,30 @@ impl State {
 
     pub fn col_name(i: u8) -> String {
         ((('A' as u8 - 1) + (i % 26)) as char).to_string()
+    }
+
+    pub fn save_edits(&mut self) {
+        let Mode::Edit = self.mode else {
+            panic!("Called finish_edit() on a non-edit Mode ");
+        };
+        let Cursor::Single((r, c)) = self.cursor else {
+            panic!("Non-single cursor in EDIT mode");
+        };
+
+        let mut row = &mut self.get_row(r as usize);
+        let prev_cell = State::get_col(&mut row, c as usize);
+        let previous_value = prev_cell.value.clone();
+
+        self.mode = Mode::Nav;
+
+        &self.undo_stack.push(Action {
+            addr: (r, c),
+            previous_value,
+            new_value: self.edit_buffer.clone(),
+        });
+        &self.redo_stack.clear();
+
+        self.set_at((r, c), DisplayCell::new(self.edit_buffer.clone()));
     }
 
     // Helper function that calls set_at under the hood.

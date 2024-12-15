@@ -77,13 +77,7 @@ impl StatusBar {
                     Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
                 }
             ),
-            Mode::Edit => format!(
-                "={}",
-                match state.cursor {
-                    Cursor::Single(addr) => &state.get_at(addr).value,
-                    _ => panic!("Editing with non-single select!"),
-                },
-            ),
+            Mode::Edit => format!("={}", &state.edit_buffer),
         }
     }
 }

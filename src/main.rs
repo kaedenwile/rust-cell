@@ -37,7 +37,9 @@ fn main() {
                 Key::Char('=') => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.mode = Mode::Edit;
-                        state.edit_cursor = state.get_at(addr).value.len();
+                        let edit_cell = &state.get_at(addr);
+                        state.edit_buffer = edit_cell.value.clone();
+                        state.edit_cursor = state.edit_buffer.len();
                     }
                 }
                 Key::Backspace => {
@@ -67,7 +69,9 @@ fn main() {
                 };
 
                 match evt {
-                    Key::Char('\n') | Key::Esc => state.mode = Mode::Nav,
+                    Key::Char('\n') => state.save_edits(),
+                    Key::Esc => state.mode = Mode::Nav,
+
                     Key::Ctrl('a') => state.edit_cursor = 0,
                     Key::Ctrl('e') => state.edit_cursor = state.get_at(addr).value.len(),
                     Key::Alt('f') => {
@@ -84,31 +88,16 @@ fn main() {
                     }
 
                     Key::Char(l) => {
-                        let edit_cursor = state.edit_cursor;
-                        state.edit_at(addr, |cell| {
-                            let mut new_val = cell.value.clone();
-                            new_val.insert(edit_cursor, l);
-                            DisplayCell::new(new_val)
-                        });
+                        state.edit_buffer.insert(state.edit_cursor, l);
                         state.edit_cursor += 1;
                     }
 
                     Key::Backspace => {
-                        let edit_cursor = state.edit_cursor;
-                        state.edit_at(addr, |cell| {
-                            let mut new_val = cell.value.clone();
-
-                            if edit_cursor == 0 {
-                                return DisplayCell::new(new_val);
-                            }
-
-                            new_val.remove(edit_cursor - 1);
-                            DisplayCell::new(new_val)
-                        });
-
-                        if state.edit_cursor > 0 {
-                            state.edit_cursor -= 1;
+                        if state.edit_cursor == 0 {
+                            return;
                         }
+                        state.edit_buffer.remove(state.edit_cursor - 1);
+                        state.edit_cursor -= 1;
                     }
 
                     Key::Left if state.edit_cursor > 0 => state.edit_cursor -= 1,
