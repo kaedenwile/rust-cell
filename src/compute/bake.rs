@@ -20,6 +20,15 @@ pub fn bake(state: &mut State) {
 
         if cell.value.is_empty() {
             return;
+        } else if cell.value.starts_with('"') {
+            // HANDLE STRINGS
+            let mut text = cell.value[1..].to_string();
+            if text.ends_with('"') {
+                text.remove(text.len() - 1);
+            }
+            cell.computed.set_string(text);
+            state.set_at(addr, cell);
+            return;
         }
 
         let parse_result = parse(&cell.value.as_str());

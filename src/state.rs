@@ -184,6 +184,13 @@ impl CellComputation {
         self.display = "".to_string();
     }
 
+    pub fn set_string(&mut self, value: String) {
+        self.is_computed = true;
+        self.error = false;
+        self.display = value;
+        self.value = None;
+    }
+
     pub fn set_error(&mut self, err: String) {
         self.is_computed = true;
         self.error = true;
