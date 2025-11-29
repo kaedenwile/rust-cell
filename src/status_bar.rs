@@ -1,7 +1,7 @@
 use crate::state::{Cursor, Mode, State};
 use crate::window::Window;
-use termion::color;
 use termion::color::Color;
+use termion::color;
 
 pub enum StatusBar {}
 
@@ -61,23 +61,19 @@ impl StatusBar {
 
     pub fn get_status_message(state: &State) -> String {
         match state.mode {
-            Mode::Nav => format!(
-                "Cursor: {}",
-                match state.cursor {
-                    Cursor::Single((r, c)) => {
-                        let cell = state.get_at((r, c));
-                        format!(
-                            "{}{} ERR:{} {}",
-                            r + 1,
-                            State::col_name(c as u8 + 1),
-                            cell.computed.error,
-                            cell.computed.display
-                        )
-                    }
-                    Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
-                    Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
+            Mode::Nav => match state.cursor {
+                Cursor::Single((r, c)) => {
+                    let cell = state.get_at((r, c));
+                    format!(
+                        "{}{} {}",
+                        r + 1,
+                        State::col_name(c as u8 + 1),
+                        cell.computed.display
+                    )
                 }
-            ),
+                Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
+                Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
+            },
             Mode::Edit => format!("={}", &state.edit_buffer),
             Mode::Save => format!("Saving to ./{}", &state.edit_buffer),
         }

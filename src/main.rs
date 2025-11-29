@@ -48,7 +48,8 @@ fn main() {
 
         match state.mode {
             Mode::Nav => match evt {
-                AppEvent::Key(Key::Char('q')) => break, // Exit
+                AppEvent::Key(Key::Ctrl('q')) => break, // Exit
+                AppEvent::Key(Key::Ctrl('c')) => break, // Exit
 
                 // Save
                 AppEvent::Key(Key::Ctrl('s')) => {
@@ -57,9 +58,11 @@ fn main() {
                     state.edit_cursor = state.edit_buffer.len();
                 }
 
+                // Clear and start editing
                 AppEvent::Key(Key::Char('=')) => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.mode = Mode::Edit;
+                        state.clear_at(addr);
                         let edit_cell = &state.get_at(addr);
                         state.edit_buffer = edit_cell.value.clone();
                         state.edit_cursor = state.edit_buffer.len();
@@ -74,15 +77,21 @@ fn main() {
                 AppEvent::Key(Key::Ctrl('z')) => state.undo(),
                 AppEvent::Key(Key::Ctrl('y')) => state.redo(),
 
-                AppEvent::Key(Key::Char('w')) if state.scroll.0 > 0 => state.scroll.0 -= 1,
-                AppEvent::Key(Key::Char('a')) if state.scroll.1 > 0 => state.scroll.1 -= 1,
-                AppEvent::Key(Key::Char('s')) => state.scroll.0 += 1,
-                AppEvent::Key(Key::Char('d')) => state.scroll.1 += 1,
+                // AppEvent::Key(Key::Char('w')) if state.scroll.0 > 0 => state.scroll.0 -= 1,
+                // AppEvent::Key(Key::Char('a')) if state.scroll.1 > 0 => state.scroll.1 -= 1,
+                // AppEvent::Key(Key::Char('s')) => state.scroll.0 += 1,
+                // AppEvent::Key(Key::Char('d')) => state.scroll.1 += 1,
 
                 AppEvent::Key(Key::Up) => state.cursor = state.cursor.move_v(-1),
                 AppEvent::Key(Key::Down) => state.cursor = state.cursor.move_v(1),
                 AppEvent::Key(Key::Left) => state.cursor = state.cursor.move_h(-1),
                 AppEvent::Key(Key::Right) => state.cursor = state.cursor.move_h(1),
+
+                AppEvent::Key(Key::AltUp) => state.cursor = state.cursor.jump_v(-1, &state),
+                AppEvent::Key(Key::AltDown) => state.cursor = state.cursor.jump_v(1, &state),
+                // Ghostty treats AltLeft as Alt-f and AltRight as Alt-b
+                AppEvent::Key(Key::Alt('f')) => state.cursor = state.cursor.jump_h(1, &state),
+                AppEvent::Key(Key::Alt('b')) => state.cursor = state.cursor.jump_h(-1, &state),
 
                 _ => {}
             },
@@ -92,7 +101,10 @@ fn main() {
                 };
 
                 match evt {
-                    AppEvent::Key(Key::Char('\n')) => state.save_edits(),
+                    AppEvent::Key(Key::Char('\n')) => {
+                        state.save_edits();
+                        state.cursor = state.cursor.move_v(1);
+                    }
                     AppEvent::Key(Key::Esc) => state.mode = Mode::Nav,
 
                     AppEvent::Key(Key::Ctrl('a')) => state.edit_cursor = 0,

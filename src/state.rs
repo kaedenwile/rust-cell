@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-
 pub struct State {
     pub mode: Mode,
     pub content: Vec<Vec<DisplayCell>>,
@@ -106,7 +104,7 @@ impl State {
             .content
             .get(row as usize)
             .and_then(|x| x.get(col as usize))
-            .unwrap_or(BLANK_CELL.get_or_init(|| DisplayCell::blank()))
+            .unwrap_or(&BLANK_CELL)
     }
 
     pub fn set_at(&mut self, (r, c): Address, cell: DisplayCell) {
@@ -160,7 +158,7 @@ pub struct Action {
     pub new_value: String,
 }
 
-static BLANK_CELL: OnceLock<DisplayCell> = OnceLock::new();
+static BLANK_CELL: DisplayCell = DisplayCell::blank();
 
 #[derive(Clone)]
 pub struct CellComputation {
@@ -171,18 +169,18 @@ pub struct CellComputation {
 }
 
 impl CellComputation {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         CellComputation {
             is_computed: false,
             error: false,
-            display: "".to_string(),
+            display: String::new(),
             value: None,
         }
     }
 
     pub fn clear(&mut self) {
         self.is_computed = false;
-        self.display = "".to_string();
+        self.display.clear();
     }
 
     pub fn set_string(&mut self, value: String) {
@@ -215,7 +213,7 @@ pub struct DisplayCell {
 }
 
 impl DisplayCell {
-    pub fn new(value: String) -> Self {
+    pub const fn new(value: String) -> Self {
         DisplayCell {
             value,
             computed: CellComputation::new(),
@@ -223,8 +221,12 @@ impl DisplayCell {
         }
     }
 
-    pub fn blank() -> Self {
-        DisplayCell::new("".to_string())
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty()
+    }
+
+    pub const fn blank() -> Self {
+        DisplayCell::new(String::new())
     }
 
     pub fn with_alignment(mut self, alignment: Alignment) -> Self {
@@ -233,12 +235,16 @@ impl DisplayCell {
     }
 }
 
+static MAX_ROW: u16 = 1000;
+static MAX_COL: u16 = 1000;
+
 #[derive(Clone)]
 pub enum Alignment {
     Left,
     Right,
 }
 
+#[derive(Clone)]
 pub enum Cursor {
     Single(Address),
     // Range(Address, Address),
@@ -264,6 +270,71 @@ impl Cursor {
             Cursor::Row(r) => Cursor::Row(r.saturating_add_signed(direction)),
             Cursor::Column(c) if direction < 0 => Cursor::Column(*c), // copy of self
             Cursor::Column(c) => Cursor::Single((0, *c)),
+        }
+    }
+
+    pub fn jump_h(&self, direction: i16, state: &State) -> Self {
+        let Cursor::Single((r, c)) = *self else { return self.clone(); };
+
+        // Short circuit if we're already in the first col
+        if direction < 0 && c == 0 { return self.clone(); }
+
+        let start_is_empty = state.get_at((r, c)).is_empty();
+        let mut prev_col = c;
+        let mut prev_is_empty = start_is_empty;
+
+        loop {
+            let next_col = prev_col.saturating_add_signed(direction);
+            let next_is_empty = state.get_at((r, next_col)).is_empty();
+
+            if start_is_empty && prev_is_empty && !next_is_empty {
+                return Cursor::Single((r, next_col));
+            } else if !start_is_empty && prev_is_empty && !next_is_empty {
+                return Cursor::Single((r, next_col));
+            } else if prev_col != c && !start_is_empty && !prev_is_empty && next_is_empty {
+                return Cursor::Single((r, prev_col))
+            }
+
+            if direction < 0 && prev_col == 1 {
+                return Cursor::Single((r, 0));
+            } else if direction > 0 && next_col == MAX_COL {
+                return Cursor::Single((r, MAX_COL - 1));
+            }
+
+            prev_col = next_col;
+            prev_is_empty = next_is_empty;
+        }
+    }
+    pub fn jump_v(&self, direction: i16, state: &State) -> Self {
+        let Cursor::Single((r, c)) = *self else { return self.clone(); };
+
+        // Short circuit if we're already in the first row
+        if direction < 0 && r == 0 { return self.clone(); }
+
+        let start_is_empty = state.get_at((r, c)).is_empty();
+        let mut prev_row = r;
+        let mut prev_is_empty = start_is_empty;
+
+        loop {
+            let next_row = prev_row.saturating_add_signed(direction);
+            let next_is_empty = state.get_at((next_row, c)).is_empty();
+
+            if start_is_empty && prev_is_empty && !next_is_empty {
+                return Cursor::Single((next_row, c));
+            } else if !start_is_empty && prev_is_empty && !next_is_empty {
+                return Cursor::Single((next_row, c));
+            } else if prev_row != r && !start_is_empty && !prev_is_empty && next_is_empty {
+                return Cursor::Single((prev_row, c))
+            }
+
+            if direction < 0 && prev_row == 1 {
+                return Cursor::Single((0, c));
+            } else if direction > 0 && next_row == MAX_ROW {
+                return Cursor::Single((MAX_ROW - 1, c));
+            }
+
+            prev_row = next_row;
+            prev_is_empty = next_is_empty;
         }
     }
 }
