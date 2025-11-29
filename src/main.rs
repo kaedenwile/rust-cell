@@ -1,10 +1,11 @@
+use crate::event_loop::{events, AppEvent};
 use crate::filesystem::{load, save};
 use crate::screen::draw;
 use crate::state::{Cursor, Mode, State};
 use crate::status_bar::StatusBar;
 use crate::window::{screen, Frame, Window};
-use std::{env, io};
-use termion::event::*;
+use std::env;
+use termion::event::Key;
 use termion::input::TermRead;
 
 mod compute;
@@ -14,9 +15,9 @@ mod state;
 mod status_bar;
 mod window;
 mod color;
+mod event_loop;
 
 fn main() {
-    let stdin = io::stdin();
     let screen = &screen();
 
     let screen_size = screen.size();
@@ -34,21 +35,29 @@ fn main() {
     StatusBar::draw(&mut status_bar, &state);
     window.flush();
 
-    for c in stdin.keys() {
-        let evt = c.unwrap();
+    for evt in events() {
+        if let AppEvent::Resize = evt {
+            let screen_size = screen.size();
+            window.layout((0, 0), (screen_size.0, screen_size.1 - 1));
+            status_bar.layout((0, screen_size.1), (screen_size.0, 1));
+            draw(&mut window, &state);
+            StatusBar::draw(&mut status_bar, &state);
+            window.flush();
+            continue;
+        }
 
         match state.mode {
             Mode::Nav => match evt {
-                Key::Char('q') => break, // Exit
+                AppEvent::Key(Key::Char('q')) => break, // Exit
 
                 // Save
-                Key::Ctrl('s') => {
+                AppEvent::Key(Key::Ctrl('s')) => {
                     state.mode = Mode::Save;
                     state.edit_buffer = state.filename.clone();
                     state.edit_cursor = state.edit_buffer.len();
                 }
 
-                Key::Char('=') => {
+                AppEvent::Key(Key::Char('=')) => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.mode = Mode::Edit;
                         let edit_cell = &state.get_at(addr);
@@ -56,24 +65,24 @@ fn main() {
                         state.edit_cursor = state.edit_buffer.len();
                     }
                 }
-                Key::Backspace => {
+                AppEvent::Key(Key::Backspace) => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.clear_at(addr);
                     }
                 }
 
-                Key::Ctrl('z') => state.undo(),
-                Key::Ctrl('y') => state.redo(),
+                AppEvent::Key(Key::Ctrl('z')) => state.undo(),
+                AppEvent::Key(Key::Ctrl('y')) => state.redo(),
 
-                Key::Char('w') if state.scroll.0 > 0 => state.scroll.0 -= 1,
-                Key::Char('a') if state.scroll.1 > 0 => state.scroll.1 -= 1,
-                Key::Char('s') => state.scroll.0 += 1,
-                Key::Char('d') => state.scroll.1 += 1,
+                AppEvent::Key(Key::Char('w')) if state.scroll.0 > 0 => state.scroll.0 -= 1,
+                AppEvent::Key(Key::Char('a')) if state.scroll.1 > 0 => state.scroll.1 -= 1,
+                AppEvent::Key(Key::Char('s')) => state.scroll.0 += 1,
+                AppEvent::Key(Key::Char('d')) => state.scroll.1 += 1,
 
-                Key::Up => state.cursor = state.cursor.move_v(-1),
-                Key::Down => state.cursor = state.cursor.move_v(1),
-                Key::Left => state.cursor = state.cursor.move_h(-1),
-                Key::Right => state.cursor = state.cursor.move_h(1),
+                AppEvent::Key(Key::Up) => state.cursor = state.cursor.move_v(-1),
+                AppEvent::Key(Key::Down) => state.cursor = state.cursor.move_v(1),
+                AppEvent::Key(Key::Left) => state.cursor = state.cursor.move_h(-1),
+                AppEvent::Key(Key::Right) => state.cursor = state.cursor.move_h(1),
 
                 _ => {}
             },
@@ -83,30 +92,30 @@ fn main() {
                 };
 
                 match evt {
-                    Key::Char('\n') => state.save_edits(),
-                    Key::Esc => state.mode = Mode::Nav,
+                    AppEvent::Key(Key::Char('\n')) => state.save_edits(),
+                    AppEvent::Key(Key::Esc) => state.mode = Mode::Nav,
 
-                    Key::Ctrl('a') => state.edit_cursor = 0,
-                    Key::Ctrl('e') => state.edit_cursor = state.get_at(addr).value.len(),
-                    Key::Alt('f') => {
+                    AppEvent::Key(Key::Ctrl('a')) => state.edit_cursor = 0,
+                    AppEvent::Key(Key::Ctrl('e')) => state.edit_cursor = state.get_at(addr).value.len(),
+                    AppEvent::Key(Key::Alt('f')) => {
                         state.edit_cursor = state.get_at(addr).value[state.edit_cursor..]
                             .find(" ")
                             .and_then(|idx| Some(idx + state.edit_cursor + 1))
                             .unwrap_or(state.get_at(addr).value.len())
                     }
-                    Key::Alt('b') => {
+                    AppEvent::Key(Key::Alt('b')) => {
                         state.edit_cursor = state.get_at(addr).value[..state.edit_cursor]
                             .rfind(" ")
                             .and_then(|idx| if idx == 0 { None } else { Some(idx - 1) })
                             .unwrap_or(0)
                     }
 
-                    Key::Char(l) => {
+                    AppEvent::Key(Key::Char(l)) => {
                         state.edit_buffer.insert(state.edit_cursor, l);
                         state.edit_cursor += 1;
                     }
 
-                    Key::Backspace => {
+                    AppEvent::Key(Key::Backspace) => {
                         if state.edit_cursor == 0 {
                             continue;
                         }
@@ -114,8 +123,8 @@ fn main() {
                         state.edit_cursor -= 1;
                     }
 
-                    Key::Left if state.edit_cursor > 0 => state.edit_cursor -= 1,
-                    Key::Right if state.edit_cursor < state.get_at(addr).value.len() => {
+                    AppEvent::Key(Key::Left) if state.edit_cursor > 0 => state.edit_cursor -= 1,
+                    AppEvent::Key(Key::Right) if state.edit_cursor < state.get_at(addr).value.len() => {
                         state.edit_cursor += 1
                     }
 
@@ -123,19 +132,19 @@ fn main() {
                 }
             }
             Mode::Save => match evt {
-                Key::Char('\n') => {
+                AppEvent::Key(Key::Char('\n')) => {
                     state.filename = state.edit_buffer.clone();
                     save(&state, &state.edit_buffer);
                     state.mode = Mode::Nav;
                 }
-                Key::Esc => state.mode = Mode::Nav,
+                AppEvent::Key(Key::Esc) => state.mode = Mode::Nav,
 
-                Key::Char(l) => {
+                AppEvent::Key(Key::Char(l)) => {
                     state.edit_buffer.insert(state.edit_cursor, l);
                     state.edit_cursor += 1;
                 }
 
-                Key::Backspace => {
+                AppEvent::Key(Key::Backspace) => {
                     if state.edit_cursor == 0 {
                         continue;
                     }

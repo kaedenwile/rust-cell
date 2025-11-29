@@ -74,6 +74,11 @@ impl Frame<'_> {
             size,
         }
     }
+
+    pub fn layout(&mut self, offset: (u16, u16), size: (u16, u16)) {
+        self.offset = offset;
+        self.size = size;
+    }
 }
 
 impl Window for Frame<'_> {
