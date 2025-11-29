@@ -13,6 +13,7 @@ mod screen;
 mod state;
 mod status_bar;
 mod window;
+mod color;
 
 fn main() {
     let stdin = io::stdin();

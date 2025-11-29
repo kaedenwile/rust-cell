@@ -1,109 +1,93 @@
 use crate::state::{Address, Alignment, Cursor, DisplayCell, Mode, State};
 use crate::window::Window;
-use termion::color;
 use termion::style;
+use crate::color::Color;
 
 enum Position<'a> {
-    BetweenRows(Address, Address),
-    BetweenCols(Address, Address),
-    Corner {
-        top_left: Address,
-        bottom_right: Address,
-    },
-
+    Pivot,
     ColumnHeader(u16, u16),
     RowHeader(u16, u16),
     InsideCell(Address, &'a DisplayCell, u16),
 }
 
+static CELL_WIDTH: u16 = 8;
+static ROW_HEADER_WIDTH: u16 = 3;
+
+/// Draw the spreadsheet
 pub fn draw(window: &dyn Window, state: &State) {
     let State { cursor, scroll, .. } = state;
     let (width, height) = window.size();
-
-    let screen_sel = match cursor {
-        Cursor::Single((r, c)) => (r + 1, c + 1),
-        Cursor::Row(r) => (*r + 1, 0),
-        Cursor::Column(c) => (0, *c + 1),
-    };
 
     for y in 0..height {
         window.go_to(1, y + 1);
 
         for x in 0..width {
             // position on screen
-            let row = if y < 2 { 0 } else { 1 + (scroll.0 + y - 2) / 2 };
-            let col = if x < 4 { 0 } else { 1 + (scroll.1 + x - 4) / 8 };
+            let row = y + scroll.0;
+            let col = if x < ROW_HEADER_WIDTH { 0 } else { 1 + (scroll.1 + x - ROW_HEADER_WIDTH) / CELL_WIDTH };
 
             let y = if row == 0 { y } else { y + scroll.0 };
             let x = if col == 0 { x } else { x + scroll.1 };
-            let text_pos = (x + 4) % 8;
-
-            // APPLY STYLING TO HEADER
-            if row == 0 || col == 0 {
-                write!(
-                    window,
-                    "{}{}",
-                    color::Bg(color::LightBlack),
-                    color::Fg(color::Black),
-                )
-            } else {
-                write!(
-                    window,
-                    "{}{}",
-                    color::Bg(color::White),
-                    color::Fg(color::Black),
-                )
-            };
+            let text_pos = (x + CELL_WIDTH - ROW_HEADER_WIDTH) % CELL_WIDTH;
 
             use Position::*;
-            let position = if x % 8 == 3 && y % 2 == 1 {
-                Corner {
-                    top_left: (row, col),
-                    bottom_right: (row + 1, col + 1),
-                }
-            } else if x % 8 == 3 {
-                BetweenCols((row, col), (row, col + 1))
-            } else if y % 2 == 1 {
-                BetweenRows((row, col), (row + 1, col))
-            } else if y < 2 {
-                ColumnHeader(col, text_pos)
+            let position = if row == 0 && col == 0 {
+                Pivot
+            } else if y < 1 {
+                ColumnHeader(col - 1, text_pos)
             } else if x < 3 {
-                RowHeader(row, text_pos)
+                RowHeader(row - 1, text_pos)
             } else {
                 let cell = state.get_at((row - 1, col - 1));
                 InsideCell((row - 1, col - 1), cell, text_pos)
             };
 
+            let bg: Color = match (&position, cursor) {
+                // Highlight cell if cell is selected
+                (InsideCell(address, _, _), Cursor::Single(cursor))
+                    if cursor == address => Color::LightWhite,
+                // Highlight cell if row is selected
+                (InsideCell((row, _), _, _), Cursor::Row(cursor_row))
+                    if cursor_row == row => Color::LightWhite,
+                // Highlight cell if column is selected
+                (InsideCell((_, col), _, _), Cursor::Column(cursor_col))
+                    if cursor_col == col => Color::LightWhite,
+                // cell is not selected
+                (InsideCell(_, _, _), _) => Color::White,
+
+                // Highlight row header if row is selected
+                (RowHeader(row, _), Cursor::Row(cursor_row))
+                    if cursor_row == row => Color::LightWhite,
+                // Row is not selected
+                (RowHeader(_, _), _) => Color::Gray,
+
+                // Highlight col header if col is selected
+                (ColumnHeader(col, _), Cursor::Column(cursor_col))
+                    if cursor_col == col => Color::LightWhite,
+                // Column is not selected
+                (ColumnHeader(_, _), _) => Color::Gray,
+                (Pivot, _) => Color::Black
+            };
+
+            let fg = match position {
+                InsideCell(_, cell, _) if cell.computed.error
+                    => Color::Red,
+                _ => Color::Black
+            };
+
             let val = match position {
-                Corner { top_left: addr, .. } if addr == screen_sel => "╃",
-                Corner {
-                    top_left: (r, _),
-                    bottom_right: (_, c),
-                } if (r, c) == screen_sel => "╄",
-                Corner {
-                    top_left: (_, c),
-                    bottom_right: (r, _),
-                } if (r, c) == screen_sel => "╅",
-                Corner {
-                    bottom_right: addr, ..
-                } if addr == screen_sel => "╆",
-                Corner { .. } => "┼",
+                Pivot => " ",
 
-                BetweenCols(addr, _) | BetweenCols(_, addr) if addr == screen_sel => "┃",
-                BetweenCols(..) => "│",
-                BetweenRows(addr, _) | BetweenRows(_, addr) if addr == screen_sel => "━",
-                BetweenRows(..) => "─",
-
-                ColumnHeader(col, text_pos) => &State::col_name(col as u8)
+                ColumnHeader(col, text_pos) => &State::col_name(col as u8 + 1)
                     .chars()
                     .nth(text_pos as usize)
                     .unwrap_or(' ')
                     .to_string(),
 
-                RowHeader(row, text_pos) => &row
+                RowHeader(row, text_pos) => &(row + 1)
                     .to_string()
                     .chars()
-                    .nth_back(6 - text_pos as usize)
+                    .nth_back(7 - text_pos as usize)
                     .unwrap_or(' ')
                     .to_string(),
 
@@ -121,14 +105,14 @@ pub fn draw(window: &dyn Window, state: &State) {
 
                     let l = match &cell.alignment {
                         Alignment::Left => chars.nth(text_pos as usize),
-                        Alignment::Right => chars.nth_back(6 - text_pos as usize),
+                        Alignment::Right => chars.nth_back(8 - text_pos as usize),
                     };
 
                     &l.unwrap_or(' ').to_string()
                 }
             };
 
-            write!(window, "{}{}", val, style::Reset);
+            write!(window, "{}{}{}{}", bg.bg(), fg.fg(), val, style::Reset);
         }
     }
 }

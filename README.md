@@ -4,6 +4,14 @@ A terminal based spreadsheet program built in Rust.
 
 <img width="724" alt="Screenshot 2024-12-14 at 9 01 29 PM" src="https://github.com/user-attachments/assets/fed94e68-c7c2-4ee8-80cd-70bb8955aa07" />
 
+## Local Development
+
+To get started, run:
+
+```shell
+cargo run
+```
+
 ## Background
 
 This is my first time using Rust, and I thought a terminal spreadsheet program would be a great project to get started

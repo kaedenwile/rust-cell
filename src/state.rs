@@ -150,6 +150,7 @@ pub enum Mode {
     Save,
 }
 
+/// A cell location in the spreadsheet (row, column)
 pub type Address = (u16, u16);
 
 #[derive(Debug)]
