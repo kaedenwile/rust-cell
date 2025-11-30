@@ -9,11 +9,11 @@ impl State {
         };
 
         match input {
-            Key::Char('\n') => {
+            Key::Enter => {
                 self.save_edits();
                 self.cursor = self.cursor.move_v(1);
             }
-            Key::Char('\t') => {
+            Key::Tab => {
                 self.save_edits();
                 self.cursor = self.cursor.move_h(1);
             }

@@ -11,15 +11,15 @@ pub struct State {
 
     pub filename: String,
 
-    pub undo_stack: Vec<Action>,
-    pub redo_stack: Vec<Action>,
+    pub undo_stack: Vec<Vec<Action>>,
+    pub redo_stack: Vec<Vec<Action>>,
 }
 
 impl State {
     pub fn blank() -> Self {
         State {
             mode: Mode::Nav,
-            content: Vec::new(),
+            content: vec![],
             scroll: (0, 0),
             cursor: Cursor::Single((0, 0)),
 
@@ -28,8 +28,8 @@ impl State {
 
             filename: String::new(),
 
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
+            undo_stack: vec![],
+            redo_stack: vec![],
         }
     }
 
@@ -51,38 +51,14 @@ impl State {
 
         self.mode = Mode::Nav;
 
-        &self.undo_stack.push(Action {
+        self.undo_stack.push(vec![Action {
             addr: (r, c),
             previous_value,
             new_value: self.edit_buffer.clone(),
-        });
-        &self.redo_stack.clear();
+        }]);
+        self.redo_stack.clear();
 
         self.set_at((r, c), DisplayCell::new(self.edit_buffer.clone()));
-    }
-
-    // Helper function that calls set_at under the hood.
-    // Also updates undo/redo stack
-    pub fn edit_at<F>(&mut self, (r, c): Address, f: F)
-    where
-        F: Fn(&DisplayCell) -> DisplayCell,
-    {
-        let mut row = &mut self.get_row(r as usize);
-
-        let prev_cell = State::get_col(&mut row, c as usize);
-        let previous_value = prev_cell.value.clone();
-
-        let new_cell = f(prev_cell);
-        let new_value = new_cell.value.clone();
-
-        &self.undo_stack.push(Action {
-            addr: (r, c),
-            previous_value,
-            new_value,
-        });
-        &self.redo_stack.clear();
-
-        self.set_at((r, c), new_cell);
     }
 
     fn get_row(&mut self, r: usize) -> &mut Vec<DisplayCell> {
@@ -115,53 +91,80 @@ impl State {
         row[c as usize] = cell;
     }
 
-    // TODO add CLEAR to undo/redo stack
     pub fn clear_at_cursor(&mut self) {
-        match self.cursor {
-            Cursor::Single(addr) => {
-                self.set_at(addr, DisplayCell::blank())
+        // Track cleared values for undo
+        let mut cleared_values: Vec<(Address, String)> = vec![];
+        let mut clear_at = |state: &mut State, addr: Address| {
+            let cell = state.get_at(addr);
+            if !cell.is_empty() {
+                cleared_values.push((addr, cell.value.clone()));
+                state.set_at(addr, DisplayCell::blank())
             }
+        };
+
+        match self.cursor {
+            Cursor::Single(addr) => clear_at(self, addr),
             Cursor::Range(start, end) => {
                 let (l, r, t, b) = Cursor::bounds(start, end);
                 for y in t..=b {
                     for x in l..=r {
-                        self.set_at((y, x), DisplayCell::blank())
+                        clear_at(self, (y, x))
                     }
                 }
             }
             Cursor::Row(r) => {
-                self.content[r as usize] = vec![];
+                let columns = self.content[r as usize].len();
+                for c in 0..columns {
+                    clear_at(self, (r, c as u16))
+                }
             }
             Cursor::Column(c) => {
                 for r in 0..self.content.len() {
-                    self.set_at((r as u16, c), DisplayCell::blank())
+                    clear_at(self, (r as u16, c));
                 }
             }
+        }
+
+        if !cleared_values.is_empty() {
+            let actions: Vec<Action> = cleared_values
+                .into_iter()
+                .map(|(addr, previous_value)| Action {
+                    addr,
+                    previous_value,
+                    new_value: String::new(),
+                })
+                .collect();
+            self.undo_stack.push(actions);
+            self.redo_stack.clear();
         }
     }
 
     pub fn undo(&mut self) {
-        let Some(action) = self.undo_stack.pop() else {
+        let Some(actions) = self.undo_stack.pop() else {
             return;
         };
 
-        let (r, c) = action.addr;
-        let row = &mut self.get_row(r as usize);
-        row[c as usize].value = action.previous_value.clone();
+        for action in &actions {
+            let (r, c) = action.addr;
+            let row = &mut self.get_row(r as usize);
+            row[c as usize].value = action.previous_value.clone();
+        }
 
-        self.redo_stack.push(action);
+        self.redo_stack.push(actions);
     }
 
     pub fn redo(&mut self) {
-        let Some(action) = self.redo_stack.pop() else {
+        let Some(actions) = self.redo_stack.pop() else {
             return;
         };
 
-        let (r, c) = action.addr;
-        let row = &mut self.get_row(r as usize);
-        row[c as usize].value = action.new_value.clone();
+        for action in &actions {
+            let (r, c) = action.addr;
+            let row = &mut self.get_row(r as usize);
+            row[c as usize].value = action.new_value.clone();
+        }
 
-        self.undo_stack.push(action);
+        self.undo_stack.push(actions);
     }
 }
 

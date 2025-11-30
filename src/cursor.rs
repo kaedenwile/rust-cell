@@ -47,8 +47,8 @@ impl Cursor {
             Cursor::Single((r, c)) => Cursor::Single((r, c.saturating_add_signed(direction))),
 
             // If range is selected, treat as Single selection from starting point
-            Cursor::Range((r, c), _) if direction < 0 && c == 0 => Cursor::Row(r),
-            Cursor::Range((r, c), _) => Cursor::Single((r, c.saturating_add_signed(direction))),
+            Cursor::Range(_, (r, c)) if direction < 0 && c == 0 => Cursor::Row(r),
+            Cursor::Range(_, (r, c)) => Cursor::Single((r, c.saturating_add_signed(direction))),
 
             Cursor::Row(r) if direction < 0 => Cursor::Row(r), // copy of self
             Cursor::Row(r) => Cursor::Single((r, 0)),
@@ -62,8 +62,8 @@ impl Cursor {
             Cursor::Single((r, c)) => Cursor::Single((r.saturating_add_signed(direction), c)),
 
             // If range is selected, treat as Single selection from starting point
-            Cursor::Range((r, c), _) if direction < 0 && r == 0 => Cursor::Column(c),
-            Cursor::Range((r, c), _) => Cursor::Single((r.saturating_add_signed(direction), c)),
+            Cursor::Range(_, (r, c)) if direction < 0 && r == 0 => Cursor::Column(c),
+            Cursor::Range(_, (r, c)) => Cursor::Single((r.saturating_add_signed(direction), c)),
 
             Cursor::Row(r) => Cursor::Row(r.saturating_add_signed(direction)),
             Cursor::Column(c) if direction < 0 => Cursor::Column(c), // copy of self
@@ -75,8 +75,8 @@ impl Cursor {
         match *self {
             Cursor::Single(addr) =>
                 Cursor::Single(state.jump_addr(addr, Orientation::Horizontal, direction)),
-            Cursor::Range(start, _) =>
-                Cursor::Single(state.jump_addr(start, Orientation::Horizontal, direction)),
+            Cursor::Range(_, end) =>
+                Cursor::Single(state.jump_addr(end, Orientation::Horizontal, direction)),
             _ => self.clone()
         }
     }
@@ -84,8 +84,8 @@ impl Cursor {
         match *self {
             Cursor::Single(addr) =>
                 Cursor::Single(state.jump_addr(addr, Orientation::Vertical, direction)),
-            Cursor::Range(start, _) =>
-                Cursor::Single(state.jump_addr(start, Orientation::Vertical, direction)),
+            Cursor::Range(_, end) =>
+                Cursor::Single(state.jump_addr(end, Orientation::Vertical, direction)),
             _ => self.clone()
         }
     }
