@@ -1,3 +1,5 @@
+use crate::cursor::Cursor;
+
 pub struct State {
     pub mode: Mode,
     pub content: Vec<Vec<DisplayCell>>,
@@ -19,7 +21,7 @@ impl State {
             mode: Mode::Nav,
             content: Vec::new(),
             scroll: (0, 0),
-            cursor: Cursor::Single((1, 1)),
+            cursor: Cursor::Single((0, 0)),
 
             edit_buffer: String::new(),
             edit_cursor: 0,
@@ -113,8 +115,29 @@ impl State {
         row[c as usize] = cell;
     }
 
-    pub fn clear_at(&mut self, addr: Address) {
-        self.set_at(addr, DisplayCell::blank())
+    // TODO add CLEAR to undo/redo stack
+    pub fn clear_at_cursor(&mut self) {
+        match self.cursor {
+            Cursor::Single(addr) => {
+                self.set_at(addr, DisplayCell::blank())
+            }
+            Cursor::Range(start, end) => {
+                let (l, r, t, b) = Cursor::bounds(start, end);
+                for y in t..=b {
+                    for x in l..=r {
+                        self.set_at((y, x), DisplayCell::blank())
+                    }
+                }
+            }
+            Cursor::Row(r) => {
+                self.content[r as usize] = vec![];
+            }
+            Cursor::Column(c) => {
+                for r in 0..self.content.len() {
+                    self.set_at((r as u16, c), DisplayCell::blank())
+                }
+            }
+        }
     }
 
     pub fn undo(&mut self) {
@@ -238,106 +261,8 @@ impl DisplayCell {
     }
 }
 
-static MAX_ROW: u16 = 1000;
-static MAX_COL: u16 = 1000;
-
 #[derive(Clone)]
 pub enum Alignment {
     Left,
     Right,
-}
-
-#[derive(Clone)]
-pub enum Cursor {
-    Single(Address),
-    // Range(Address, Address),
-    Row(u16),
-    Column(u16),
-}
-
-impl Cursor {
-    pub fn move_h(&self, direction: i16) -> Self {
-        match self {
-            Cursor::Single((r, c)) if direction < 0 && *c == 0 => Cursor::Row(*r),
-            Cursor::Single((r, c)) => Cursor::Single((*r, c.saturating_add_signed(direction))),
-            Cursor::Row(r) if direction < 0 => Cursor::Row(*r), // copy of self
-            Cursor::Row(r) => Cursor::Single((*r, 0)),
-            Cursor::Column(c) => Cursor::Column(c.saturating_add_signed(direction)),
-        }
-    }
-
-    pub fn move_v(&self, direction: i16) -> Self {
-        match self {
-            Cursor::Single((r, c)) if direction < 0 && *r == 0 => Cursor::Column(*c),
-            Cursor::Single((r, c)) => Cursor::Single((r.saturating_add_signed(direction), *c)),
-            Cursor::Row(r) => Cursor::Row(r.saturating_add_signed(direction)),
-            Cursor::Column(c) if direction < 0 => Cursor::Column(*c), // copy of self
-            Cursor::Column(c) => Cursor::Single((0, *c)),
-        }
-    }
-
-    pub fn jump_h(&self, direction: i16, state: &State) -> Self {
-        let Cursor::Single((r, c)) = *self else { return self.clone(); };
-
-        // Short circuit if we're already in the first col
-        if direction < 0 && c == 0 { return self.clone(); }
-
-        let start_is_empty = state.get_at((r, c)).is_empty();
-        let mut prev_col = c;
-        let mut prev_is_empty = start_is_empty;
-
-        loop {
-            let next_col = prev_col.saturating_add_signed(direction);
-            let next_is_empty = state.get_at((r, next_col)).is_empty();
-
-            if start_is_empty && prev_is_empty && !next_is_empty {
-                return Cursor::Single((r, next_col));
-            } else if !start_is_empty && prev_is_empty && !next_is_empty {
-                return Cursor::Single((r, next_col));
-            } else if prev_col != c && !start_is_empty && !prev_is_empty && next_is_empty {
-                return Cursor::Single((r, prev_col))
-            }
-
-            if direction < 0 && prev_col == 1 {
-                return Cursor::Single((r, 0));
-            } else if direction > 0 && next_col == MAX_COL {
-                return Cursor::Single((r, MAX_COL - 1));
-            }
-
-            prev_col = next_col;
-            prev_is_empty = next_is_empty;
-        }
-    }
-    pub fn jump_v(&self, direction: i16, state: &State) -> Self {
-        let Cursor::Single((r, c)) = *self else { return self.clone(); };
-
-        // Short circuit if we're already in the first row
-        if direction < 0 && r == 0 { return self.clone(); }
-
-        let start_is_empty = state.get_at((r, c)).is_empty();
-        let mut prev_row = r;
-        let mut prev_is_empty = start_is_empty;
-
-        loop {
-            let next_row = prev_row.saturating_add_signed(direction);
-            let next_is_empty = state.get_at((next_row, c)).is_empty();
-
-            if start_is_empty && prev_is_empty && !next_is_empty {
-                return Cursor::Single((next_row, c));
-            } else if !start_is_empty && prev_is_empty && !next_is_empty {
-                return Cursor::Single((next_row, c));
-            } else if prev_row != r && !start_is_empty && !prev_is_empty && next_is_empty {
-                return Cursor::Single((prev_row, c))
-            }
-
-            if direction < 0 && prev_row == 1 {
-                return Cursor::Single((0, c));
-            } else if direction > 0 && next_row == MAX_ROW {
-                return Cursor::Single((MAX_ROW - 1, c));
-            }
-
-            prev_row = next_row;
-            prev_is_empty = next_is_empty;
-        }
-    }
 }

@@ -1,5 +1,6 @@
 use crate::color::Color;
-use crate::state::{Address, Alignment, Cursor, DisplayCell, Mode, State};
+use crate::cursor::Cursor;
+use crate::state::{Address, Alignment, DisplayCell, Mode, State};
 use crate::window::Window;
 use termion::style;
 
@@ -45,15 +46,8 @@ pub fn draw(window: &dyn Window, state: &State) {
 
             let bg: Color = match (&position, cursor) {
                 // Highlight cell if cell is selected
-                (InsideCell(address, _, _), Cursor::Single(cursor))
-                if cursor == address => Color::LightWhite,
-                // Highlight cell if row is selected
-                (InsideCell((row, _), _, _), Cursor::Row(cursor_row))
-                if cursor_row == row => Color::LightWhite,
-                // Highlight cell if column is selected
-                (InsideCell((_, col), _, _), Cursor::Column(cursor_col))
-                if cursor_col == col => Color::LightWhite,
-                // cell is not selected
+                (InsideCell(address, _, _), cursor)
+                if cursor.contains(*address) => Color::LightWhite,
                 (InsideCell(_, _, _), _) => Color::White,
 
                 // Highlight row header if row is selected

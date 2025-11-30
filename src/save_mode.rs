@@ -1,6 +1,6 @@
 use crate::filesystem::save;
+use crate::keyboard::Key;
 use crate::state::{Mode, State};
-use termion::event::Key;
 
 impl State {
     pub fn enter_save_mode(&mut self) {

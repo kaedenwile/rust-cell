@@ -1,4 +1,5 @@
-use crate::state::{Cursor, Mode, State};
+use crate::cursor::Cursor;
+use crate::state::{Mode, State};
 use crate::window::Window;
 use termion::color;
 use termion::color::Color;
@@ -70,6 +71,16 @@ impl StatusBar {
         match state.mode {
             Mode::Nav => match state.cursor {
                 Cursor::Single((r, c)) => {
+                    let cell = state.get_at((r, c));
+                    format!(
+                        "{}{} {}",
+                        r + 1,
+                        State::col_name(c as u8 + 1),
+                        if cell.computed.error { &cell.computed.display } else { &cell.value }
+                    )
+                }
+                // TODO improve range display
+                Cursor::Range((r, c), _) => {
                     let cell = state.get_at((r, c));
                     format!(
                         "{}{} {}",

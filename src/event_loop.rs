@@ -1,9 +1,9 @@
+use crate::keyboard::{map_raw_code, map_termion_key, Key};
 use signal_hook::consts::signal::SIGWINCH;
 use signal_hook::iterator::Signals;
 use std::io::stdin;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-use termion::event::Key;
 use termion::input::TermRead;
 
 pub enum AppEvent {
@@ -27,9 +27,17 @@ pub fn events() -> Receiver<AppEvent> {
     // Listen to keystroke events
     let tx_keys = tx.clone();
     thread::spawn(move || {
-        for c in stdin().keys() {
-            if let Ok(event) = c {
-                tx_keys.send(AppEvent::Key(event)).unwrap();
+        for event in stdin().events() {
+            match event.unwrap() {
+                termion::event::Event::Key(termion_key) => {
+                    let key = map_termion_key(termion_key);
+                    tx_keys.send(AppEvent::Key(key)).unwrap();
+                }
+                termion::event::Event::Unsupported(raw_code) => {
+                    let key = map_raw_code(raw_code);
+                    tx_keys.send(AppEvent::Key(key)).unwrap();
+                }
+                _ => {}
             }
         }
     });

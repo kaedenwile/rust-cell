@@ -1,5 +1,6 @@
-use crate::state::{Cursor, Mode, State};
-use termion::event::Key;
+use crate::cursor::Cursor;
+use crate::keyboard::Key;
+use crate::state::{Mode, State};
 
 impl State {
     pub fn handle_input_edit_mode(&mut self, input: Key) {

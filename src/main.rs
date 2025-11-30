@@ -1,5 +1,6 @@
 use crate::event_loop::{events, AppEvent};
 use crate::filesystem::load;
+use crate::keyboard::Key;
 use crate::layout::ScreenLayout;
 use crate::menu::Menu;
 use crate::screen::draw;
@@ -7,8 +8,6 @@ use crate::state::{Mode, State};
 use crate::status_bar::StatusBar;
 use crate::window::{screen, Window};
 use std::env;
-use termion::event::Key;
-use termion::input::TermRead;
 
 mod compute;
 mod filesystem;
@@ -23,6 +22,8 @@ mod menu;
 mod save_mode;
 mod edit_mode;
 mod nav_mode;
+mod cursor;
+mod keyboard;
 
 fn main() {
     let screen = &screen();
