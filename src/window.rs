@@ -3,7 +3,6 @@ use std::fmt::Arguments;
 use std::io::{stdout, Write};
 use termion::cursor::HideCursor;
 use termion::raw::IntoRawMode;
-use termion::screen::IntoAlternateScreen;
 
 // A rectangle that can be written to
 pub trait Window {
@@ -28,8 +27,8 @@ pub fn screen() -> Screen {
         stdout()
             .into_raw_mode()
             .unwrap()
-            .into_alternate_screen()
-            .unwrap(),
+        // .into_alternate_screen()
+        // .unwrap(),
     );
 
     Screen {
