@@ -162,6 +162,8 @@ static BLANK_CELL: DisplayCell = DisplayCell::blank();
 
 #[derive(Clone)]
 pub struct CellComputation {
+    /// Has this value been computed yet or is it still pending?
+    /// Can be true even when value is None
     pub is_computed: bool,
     pub error: bool,
     pub display: String,
@@ -186,8 +188,9 @@ impl CellComputation {
     pub fn set_string(&mut self, value: String) {
         self.is_computed = true;
         self.error = false;
+        // Convert to float with best effort
+        self.value = (&value).parse::<f32>().ok();
         self.display = value;
-        self.value = None;
     }
 
     pub fn set_error(&mut self, err: String) {

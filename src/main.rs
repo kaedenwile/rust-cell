@@ -66,26 +66,14 @@ fn main() {
                     }
                 }
 
-                // Start editing
-                AppEvent::Key(Key::Char(l)) => {
-                    if let Cursor::Single(addr) = state.cursor {
-                        state.mode = Mode::Edit;
-                        state.edit_buffer = l.to_string();
-                        state.edit_cursor = 1;
-                    }
-                }
-
                 AppEvent::Key(Key::Ctrl('z')) => state.undo(),
                 AppEvent::Key(Key::Ctrl('y')) => state.redo(),
 
-                // AppEvent::Key(Key::Char('w')) if state.scroll.0 > 0 => state.scroll.0 -= 1,
-                // AppEvent::Key(Key::Char('a')) if state.scroll.1 > 0 => state.scroll.1 -= 1,
-                // AppEvent::Key(Key::Char('s')) => state.scroll.0 += 1,
-                // AppEvent::Key(Key::Char('d')) => state.scroll.1 += 1,
-
                 AppEvent::Key(Key::Up) => state.cursor = state.cursor.move_v(-1),
+                AppEvent::Key(Key::Char('\n')) => state.cursor = state.cursor.move_v(1),
                 AppEvent::Key(Key::Down) => state.cursor = state.cursor.move_v(1),
                 AppEvent::Key(Key::Left) => state.cursor = state.cursor.move_h(-1),
+                AppEvent::Key(Key::Char('\t')) => state.cursor = state.cursor.move_h(1),
                 AppEvent::Key(Key::Right) => state.cursor = state.cursor.move_h(1),
 
                 AppEvent::Key(Key::AltUp) => state.cursor = state.cursor.jump_v(-1, &state),
@@ -93,6 +81,25 @@ fn main() {
                 // Ghostty treats AltLeft as Alt-f and AltRight as Alt-b
                 AppEvent::Key(Key::Alt('f')) => state.cursor = state.cursor.jump_h(1, &state),
                 AppEvent::Key(Key::Alt('b')) => state.cursor = state.cursor.jump_h(-1, &state),
+
+                // Start editing
+                AppEvent::Key(Key::Ctrl('e')) => {
+                    if let Cursor::Single(addr) = state.cursor {
+                        state.mode = Mode::Edit;
+                        let edit_cell = &state.get_at(addr);
+                        state.edit_buffer = edit_cell.value.clone();
+                        state.edit_cursor = state.edit_buffer.len();
+                    }
+                }
+
+                // Or just start typing to overwrite the cell
+                AppEvent::Key(Key::Char(l)) => {
+                    if let Cursor::Single(_) = state.cursor {
+                        state.mode = Mode::Edit;
+                        state.edit_buffer = l.to_string();
+                        state.edit_cursor = 1;
+                    }
+                }
 
                 _ => {}
             },
@@ -105,6 +112,10 @@ fn main() {
                     AppEvent::Key(Key::Char('\n')) => {
                         state.save_edits();
                         state.cursor = state.cursor.move_v(1);
+                    }
+                    AppEvent::Key(Key::Char('\t')) => {
+                        state.save_edits();
+                        state.cursor = state.cursor.move_h(1);
                     }
                     AppEvent::Key(Key::Esc) => state.mode = Mode::Nav,
 

@@ -24,15 +24,22 @@ impl StatusBar {
             for x in 0..width {
                 let mut chars = status_message.chars();
 
-                if let Mode::Edit = state.mode {
-                    if x as usize == state.edit_cursor + 1 {
+                if matches!(state.mode, Mode::Edit | Mode::Save) {
+                    // Edit offset is 0, Save offset is length of "Saving to ./"
+                    let offset = match state.mode {
+                        Mode::Edit => 0,
+                        Mode::Save => 12,
+                        _ => 0,
+                    };
+
+                    if x as usize == state.edit_cursor + offset {
                         write!(
                             window,
                             "{}{}",
                             color::Bg(color::Black),
                             color::Fg(color::White)
                         );
-                    } else if x as usize == state.edit_cursor + 2 {
+                    } else if x as usize == state.edit_cursor + offset + 1 {
                         write!(
                             window,
                             "{}{}",
@@ -74,7 +81,7 @@ impl StatusBar {
                 Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
                 Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
             },
-            Mode::Edit => format!("={}", &state.edit_buffer),
+            Mode::Edit => state.edit_buffer.to_string(),
             Mode::Save => format!("Saving to ./{}", &state.edit_buffer),
         }
     }

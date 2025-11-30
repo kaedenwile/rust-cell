@@ -98,9 +98,9 @@ pub fn draw(window: &dyn Window, state: &State) {
                         _ => false,
                     };
 
-                    let mut content = match state.mode {
-                        Mode::Edit if is_sole_selection => format!("={}", state.edit_buffer),
-                        _ => cell.computed.display.to_string(),
+                    let content = match state.mode {
+                        Mode::Edit if is_sole_selection => &state.edit_buffer,
+                        _ => &cell.computed.display,
                     };
                     let mut chars = content.chars();
 
