@@ -1,7 +1,7 @@
 use crate::state::{Cursor, Mode, State};
 use crate::window::Window;
-use termion::color::Color;
 use termion::color;
+use termion::color::Color;
 
 pub enum StatusBar {}
 
@@ -68,7 +68,7 @@ impl StatusBar {
                         "{}{} {}",
                         r + 1,
                         State::col_name(c as u8 + 1),
-                        cell.computed.display
+                        if cell.computed.error { &cell.computed.display } else { &cell.value }
                     )
                 }
                 Cursor::Row(r) => format!("{r}:{r}", r = r + 1),

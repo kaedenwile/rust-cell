@@ -1,7 +1,7 @@
+use crate::color::Color;
 use crate::state::{Address, Alignment, Cursor, DisplayCell, Mode, State};
 use crate::window::Window;
 use termion::style;
-use crate::color::Color;
 
 enum Position<'a> {
     Pivot,
@@ -12,6 +12,7 @@ enum Position<'a> {
 
 static CELL_WIDTH: u16 = 8;
 static ROW_HEADER_WIDTH: u16 = 3;
+static ELLIPSIS: char = '…';
 
 /// Draw the spreadsheet
 pub fn draw(window: &dyn Window, state: &State) {
@@ -45,25 +46,25 @@ pub fn draw(window: &dyn Window, state: &State) {
             let bg: Color = match (&position, cursor) {
                 // Highlight cell if cell is selected
                 (InsideCell(address, _, _), Cursor::Single(cursor))
-                    if cursor == address => Color::LightWhite,
+                if cursor == address => Color::LightWhite,
                 // Highlight cell if row is selected
                 (InsideCell((row, _), _, _), Cursor::Row(cursor_row))
-                    if cursor_row == row => Color::LightWhite,
+                if cursor_row == row => Color::LightWhite,
                 // Highlight cell if column is selected
                 (InsideCell((_, col), _, _), Cursor::Column(cursor_col))
-                    if cursor_col == col => Color::LightWhite,
+                if cursor_col == col => Color::LightWhite,
                 // cell is not selected
                 (InsideCell(_, _, _), _) => Color::White,
 
                 // Highlight row header if row is selected
                 (RowHeader(row, _), Cursor::Row(cursor_row))
-                    if cursor_row == row => Color::LightWhite,
+                if cursor_row == row => Color::LightWhite,
                 // Row is not selected
                 (RowHeader(_, _), _) => Color::Gray,
 
                 // Highlight col header if col is selected
                 (ColumnHeader(col, _), Cursor::Column(cursor_col))
-                    if cursor_col == col => Color::LightWhite,
+                if cursor_col == col => Color::LightWhite,
                 // Column is not selected
                 (ColumnHeader(_, _), _) => Color::Gray,
                 (Pivot, _) => Color::Black
@@ -71,7 +72,7 @@ pub fn draw(window: &dyn Window, state: &State) {
 
             let fg = match position {
                 InsideCell(_, cell, _) if cell.computed.error
-                    => Color::Red,
+                => Color::Red,
                 _ => Color::Black
             };
 
@@ -104,9 +105,22 @@ pub fn draw(window: &dyn Window, state: &State) {
                     let mut chars = content.chars();
 
                     let l = match &cell.alignment {
-                        Alignment::Left => chars.nth(text_pos as usize),
-                        Alignment::Right => chars.nth_back(8 - text_pos as usize),
+                        Alignment::Left => {
+                            if content.len() > 8 && text_pos == 7 {
+                                Some(ELLIPSIS)
+                            } else {
+                                chars.nth(text_pos as usize)
+                            }
+                        }
+                        Alignment::Right => {
+                            if content.len() > 8 && text_pos == 0 {
+                                Some(ELLIPSIS)
+                            } else {
+                                chars.nth_back(8 - text_pos as usize)
+                            }
+                        }
                     };
+
 
                     &l.unwrap_or(' ').to_string()
                 }

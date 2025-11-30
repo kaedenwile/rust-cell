@@ -1,9 +1,11 @@
 use crate::event_loop::{events, AppEvent};
 use crate::filesystem::{load, save};
+use crate::layout::ScreenLayout;
+use crate::menu::Menu;
 use crate::screen::draw;
 use crate::state::{Cursor, Mode, State};
 use crate::status_bar::StatusBar;
-use crate::window::{screen, Frame, Window};
+use crate::window::{screen, Window};
 use std::env;
 use termion::event::Key;
 use termion::input::TermRead;
@@ -16,13 +18,12 @@ mod status_bar;
 mod window;
 mod color;
 mod event_loop;
+mod layout;
+mod menu;
 
 fn main() {
     let screen = &screen();
-
-    let screen_size = screen.size();
-    let mut window = Frame::new(screen, (0, 0), (screen_size.0, screen_size.1 - 1));
-    let mut status_bar = Frame::new(screen, (0, screen_size.1), (screen_size.0, 1));
+    let mut layout = ScreenLayout::new(screen);
 
     let args: Vec<String> = env::args().collect();
     let mut state = State::blank();
@@ -31,18 +32,18 @@ fn main() {
     }
 
     compute::bake(&mut state);
-    draw(&mut window, &state);
-    StatusBar::draw(&mut status_bar, &state);
-    window.flush();
+    draw(&mut layout.window, &state);
+    StatusBar::draw(&mut layout.status_bar, &state);
+    Menu::draw(&mut layout.menu, &state);
+    screen.flush();
 
     for evt in events() {
         if let AppEvent::Resize = evt {
-            let screen_size = screen.size();
-            window.layout((0, 0), (screen_size.0, screen_size.1 - 1));
-            status_bar.layout((0, screen_size.1), (screen_size.0, 1));
-            draw(&mut window, &state);
-            StatusBar::draw(&mut status_bar, &state);
-            window.flush();
+            layout.layout();
+            draw(&mut layout.window, &state);
+            StatusBar::draw(&mut layout.status_bar, &state);
+            Menu::draw(&mut layout.menu, &state);
+            screen.flush();
             continue;
         }
 
@@ -58,19 +59,19 @@ fn main() {
                     state.edit_cursor = state.edit_buffer.len();
                 }
 
-                // Clear and start editing
-                AppEvent::Key(Key::Char('=')) => {
-                    if let Cursor::Single(addr) = state.cursor {
-                        state.mode = Mode::Edit;
-                        state.clear_at(addr);
-                        let edit_cell = &state.get_at(addr);
-                        state.edit_buffer = edit_cell.value.clone();
-                        state.edit_cursor = state.edit_buffer.len();
-                    }
-                }
+                // Delete cell
                 AppEvent::Key(Key::Backspace) => {
                     if let Cursor::Single(addr) = state.cursor {
                         state.clear_at(addr);
+                    }
+                }
+
+                // Start editing
+                AppEvent::Key(Key::Char(l)) => {
+                    if let Cursor::Single(addr) = state.cursor {
+                        state.mode = Mode::Edit;
+                        state.edit_buffer = l.to_string();
+                        state.edit_cursor = 1;
                     }
                 }
 
@@ -169,9 +170,10 @@ fn main() {
         }
 
         compute::bake(&mut state);
-        draw(&mut window, &state);
-        StatusBar::draw(&mut status_bar, &state);
-        window.flush();
+        draw(&mut layout.window, &state);
+        StatusBar::draw(&mut layout.status_bar, &state);
+        Menu::draw(&mut layout.menu, &state);
+        screen.flush();
     }
 }
 

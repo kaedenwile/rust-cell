@@ -70,7 +70,7 @@ impl Node {
 
                 if cell.computed.error {
                     return Err(format!(
-                        "Err @ {}: \"{}\"",
+                        "Err@{}: \"{}\"",
                         reference, cell.computed.display
                     ));
                 }

@@ -10,7 +10,7 @@ pub trait Window {
     // get size of the window
     fn size(&self) -> (u16, u16);
 
-    // move cursor within the window
+    /// move cursor within the window (1-indexed)
     fn go_to(&self, x: u16, y: u16);
 
     fn write_fmt(&self, fmt: Arguments<'_>);
@@ -67,15 +67,15 @@ pub struct Frame<'a> {
 }
 
 impl Frame<'_> {
-    pub fn new(parent: &dyn Window, offset: (u16, u16), size: (u16, u16)) -> Frame {
+    pub fn new(parent: &dyn Window) -> Frame {
         Frame {
             parent,
-            offset,
-            size,
+            offset: (0, 0),
+            size: (1, 1),
         }
     }
 
-    pub fn layout(&mut self, offset: (u16, u16), size: (u16, u16)) {
+    pub fn position(&mut self, offset: (u16, u16), size: (u16, u16)) {
         self.offset = offset;
         self.size = size;
     }
