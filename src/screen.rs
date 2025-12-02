@@ -2,7 +2,6 @@ use crate::color::Color;
 use crate::cursor::Cursor;
 use crate::state::{Address, Alignment, DisplayCell, Mode, State};
 use crate::window::Window;
-use termion::style;
 
 enum Position<'a> {
     Pivot,
@@ -16,13 +15,11 @@ static ROW_HEADER_WIDTH: u16 = 3;
 static ELLIPSIS: char = '…';
 
 /// Draw the spreadsheet
-pub fn draw(window: &dyn Window, state: &State) {
+pub fn draw(window: &mut dyn Window, state: &State) {
     let State { cursor, scroll, .. } = state;
     let (width, height) = window.size();
 
     for y in 0..height {
-        window.go_to(1, y + 1);
-
         for x in 0..width {
             // position on screen
             let row = y + scroll.0;
@@ -71,20 +68,18 @@ pub fn draw(window: &dyn Window, state: &State) {
             };
 
             let val = match position {
-                Pivot => " ",
+                Pivot => ' ',
 
-                ColumnHeader(col, text_pos) => &State::col_name(col as u8 + 1)
+                ColumnHeader(col, text_pos) => State::col_name(col as u8 + 1)
                     .chars()
                     .nth(text_pos as usize)
-                    .unwrap_or(' ')
-                    .to_string(),
+                    .unwrap_or(' '),
 
-                RowHeader(row, text_pos) => &(row + 1)
+                RowHeader(row, text_pos) => (row + 1)
                     .to_string()
                     .chars()
                     .nth_back(7 - text_pos as usize)
-                    .unwrap_or(' ')
-                    .to_string(),
+                    .unwrap_or(' '),
 
                 InsideCell(cell_addr, cell, text_pos) => {
                     let is_sole_selection = match state.cursor {
@@ -98,7 +93,7 @@ pub fn draw(window: &dyn Window, state: &State) {
                     };
                     let mut chars = content.chars();
 
-                    let l = match &cell.alignment {
+                    match &cell.alignment {
                         Alignment::Left => {
                             if content.len() > 8 && text_pos == 7 {
                                 Some(ELLIPSIS)
@@ -113,14 +108,11 @@ pub fn draw(window: &dyn Window, state: &State) {
                                 chars.nth_back(8 - text_pos as usize)
                             }
                         }
-                    };
-
-
-                    &l.unwrap_or(' ').to_string()
+                    }.unwrap_or(' ')
                 }
             };
 
-            write!(window, "{}{}{}{}", bg.bg(), fg.fg(), val, style::Reset);
+            window.write_at(x, y, val, bg, fg);
         }
     }
 }

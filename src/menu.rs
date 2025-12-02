@@ -1,37 +1,16 @@
+use crate::color::Color;
 use crate::state::State;
 use crate::window::Window;
-use termion::{color, style};
 
 pub enum Menu {}
 
 impl Menu {
     pub fn draw(window: &mut dyn Window, state: &State) {
-        // let (width, _) = window.size();
-        window.go_to(1, 1);
+        let (width, _) = window.size();
+        let message = "File  Edit  Save  Quit";
 
-        write!(
-            window,
-            "{}{}",
-            color::Bg(color::Black),
-            color::Fg(color::White)
-        );
-
-        write!(
-            window,
-            "{}{}",
-            color::Bg(color::Black),
-            color::Fg(color::White)
-        );
-
-        write!(window, "{}F{}ile  {}E{}dit  {}S{}ave  {}Q{}uit",
-               style::Underline,
-               style::NoUnderline,
-               style::Underline,
-               style::NoUnderline,
-               style::Underline,
-               style::NoUnderline,
-               style::Underline,
-               style::NoUnderline,
-        );
+        for x in 0..width {
+            window.write_at(x, 0, message.chars().nth(x as usize).unwrap_or(' '), Color::Black, Color::White);
+        }
     }
 }

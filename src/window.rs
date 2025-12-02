@@ -1,5 +1,5 @@
+use crate::color::Color;
 use std::cell::RefCell;
-use std::fmt::Arguments;
 use std::io::{stdout, Write};
 use termion::cursor::HideCursor;
 use termion::raw::IntoRawMode;
@@ -9,17 +9,34 @@ pub trait Window {
     // get size of the window
     fn size(&self) -> (u16, u16);
 
-    /// move cursor within the window (1-indexed)
-    fn go_to(&self, x: u16, y: u16);
-
-    fn write_fmt(&self, fmt: Arguments<'_>);
-
-    fn flush(&self);
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {}
 }
 
 // The base screen object
 pub struct Screen {
     inner: RefCell<Box<dyn Write>>,
+
+    /// (rows, columns)
+    size: (u16, u16),
+    prev_buffer: Vec<Vec<Pixel>>,
+    live_buffer: Vec<Vec<Pixel>>,
+}
+
+#[derive(Clone)]
+struct Pixel {
+    char: char,
+    fg: Color,
+    bg: Color,
+    // TODO styles
+}
+
+impl Pixel {
+    fn new(char: char, fg: Color, bg: Color) -> Pixel {
+        Pixel { char, fg, bg }
+    }
+    fn blank() -> Pixel {
+        Pixel::new(' ', Color::Magenta, Color::Magenta)
+    }
 }
 
 pub fn screen() -> Screen {
@@ -31,52 +48,100 @@ pub fn screen() -> Screen {
         // .unwrap(),
     );
 
-    Screen {
+    let mut screen = Screen {
         inner: RefCell::new(Box::new(terminal)),
-    }
+        size: (0, 0),
+        prev_buffer: vec![],
+        live_buffer: vec![],
+    };
+    screen.resize(); // Resize to initialize buffers
+    screen
 }
 
 impl Window for Screen {
     fn size(&self) -> (u16, u16) {
-        let Ok((cols, rows)) = termion::terminal_size() else {
-            panic!("Could not get terminal size!");
-        };
-
-        (cols, rows)
+        self.size
     }
 
-    fn go_to(&self, x: u16, y: u16) {
-        write!(self, "{}", termion::cursor::Goto(x, y));
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {
+        self.live_buffer[y as usize][x as usize] = Pixel::new(char, fg, bg);
+    }
+}
+
+impl Screen {
+    pub fn resize(&mut self) {
+        let new_size = terminal_size();
+        if new_size != self.size {
+            self.size = new_size;
+            let rows = new_size.1 as usize;
+            let cols = new_size.0 as usize;
+
+            self.prev_buffer = vec![vec![Pixel::blank(); cols]; rows];
+            self.live_buffer = vec![vec![Pixel::blank(); cols]; rows];
+
+            // Clear the terminal
+            write!(self.inner.borrow_mut(), "{}", termion::clear::All).unwrap();
+        }
     }
 
-    fn write_fmt(&self, fmt: Arguments<'_>) {
-        self.inner.borrow_mut().write_fmt(fmt).unwrap()
-    }
+    /// Efficiently write the live buffer's changes to the terminal
+    /// After testing, this doesn't seem to be a bottleneck, but it's good to have anyway
+    pub fn flush(&mut self) {
+        // what are current terminal styles? (Bg, Fg)
+        let mut brush_bg: Option<Color> = None;
+        let mut brush_fg: Option<Color> = None;
+        let mut brush_pos = self.size.0 * self.size.1; // out of bounds
 
-    fn flush(&self) {
-        self.inner.borrow_mut().flush().unwrap()
+        let mut operations: Vec<String> = vec![];
+
+        for y in 0..self.size.1 {
+            for x in 0..self.size.0 {
+                let pos = x + y * self.size.0;
+
+                let live_pixel = &self.live_buffer[y as usize][x as usize];
+                let prev_pixel = &self.prev_buffer[y as usize][x as usize];
+
+                if live_pixel.char != prev_pixel.char
+                    || live_pixel.fg != prev_pixel.fg
+                    || live_pixel.bg != prev_pixel.bg
+                {
+                    if brush_pos != pos {
+                        // Move cursor to position (x+1, y+1) because termion is 1-indexed
+                        operations.push(termion::cursor::Goto(x + 1, y + 1).to_string())
+                    }
+                    if brush_bg != Some(live_pixel.bg) {
+                        operations.push(live_pixel.bg.bg());
+                        brush_bg = Some(live_pixel.bg);
+                    }
+                    if brush_fg != Some(live_pixel.fg) {
+                        operations.push(live_pixel.fg.fg());
+                        brush_fg = Some(live_pixel.fg);
+                    }
+
+                    operations.push(live_pixel.char.to_string());
+                    brush_pos = pos;
+
+                    // Update previous buffer
+                    self.prev_buffer[y as usize][x as usize] = live_pixel.clone();
+                }
+            }
+        }
+
+        write!(self.inner.borrow_mut(), "{}", operations.join("")).unwrap();
+        self.inner.borrow_mut().flush().unwrap();
     }
 }
 
 // A subsection of the screen
 pub struct Frame<'a> {
-    parent: &'a dyn Window,
+    parent: &'a mut dyn Window,
     offset: (u16, u16),
     size: (u16, u16),
 }
 
 impl Frame<'_> {
-    pub fn new(parent: &dyn Window) -> Frame {
-        Frame {
-            parent,
-            offset: (0, 0),
-            size: (1, 1),
-        }
-    }
-
-    pub fn position(&mut self, offset: (u16, u16), size: (u16, u16)) {
-        self.offset = offset;
-        self.size = size;
+    pub fn new(parent: &'_ mut dyn Window, offset: (u16, u16), size: (u16, u16)) -> Frame {
+        Frame { parent, offset, size }
     }
 }
 
@@ -85,25 +150,15 @@ impl Window for Frame<'_> {
         self.size
     }
 
-    fn go_to(&self, x: u16, y: u16) {
-        if x == 0 || y == 0 {
-            panic!("go_to is 1-based")
-        } else if x > self.size.0 || y > self.size.1 {
-            panic!("Writing to frame OOB!")
-        }
-
-        write!(
-            self,
-            "{}",
-            termion::cursor::Goto(x + self.offset.0, y + self.offset.1)
-        )
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {
+        self.parent.write_at(x + self.offset.0, y + self.offset.1, char, bg, fg);
     }
+}
 
-    fn write_fmt(&self, fmt: Arguments<'_>) {
-        self.parent.write_fmt(fmt)
-    }
+fn terminal_size() -> (u16, u16) {
+    let Ok((cols, rows)) = termion::terminal_size() else {
+        panic!("Could not get terminal size!");
+    };
 
-    fn flush(&self) {
-        self.parent.flush()
-    }
+    (cols, rows)
 }

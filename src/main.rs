@@ -2,10 +2,7 @@ use crate::event_loop::{events, AppEvent};
 use crate::filesystem::load;
 use crate::keyboard::Key;
 use crate::layout::ScreenLayout;
-use crate::menu::Menu;
-use crate::screen::draw;
 use crate::state::{Mode, State};
-use crate::status_bar::StatusBar;
 use crate::window::{screen, Window};
 use std::env;
 
@@ -26,7 +23,7 @@ mod cursor;
 mod keyboard;
 
 fn main() {
-    let screen = &screen();
+    let screen = &mut screen();
     let mut layout = ScreenLayout::new(screen);
 
     let args: Vec<String> = env::args().collect();
@@ -36,10 +33,7 @@ fn main() {
     }
 
     compute::bake(&mut state);
-    draw(&mut layout.window, &state);
-    StatusBar::draw(&mut layout.status_bar, &state);
-    Menu::draw(&mut layout.menu, &state);
-    screen.flush();
+    layout.draw(&state);
 
     for event in events() {
         match event {
@@ -53,9 +47,6 @@ fn main() {
         }
 
         compute::bake(&mut state);
-        draw(&mut layout.window, &state);
-        StatusBar::draw(&mut layout.status_bar, &state);
-        Menu::draw(&mut layout.menu, &state);
-        screen.flush();
+        layout.draw(&state);
     }
 }

@@ -1,69 +1,44 @@
+use crate::color::Color;
 use crate::cursor::Cursor;
 use crate::state::{Mode, State};
 use crate::window::Window;
-use termion::color;
-use termion::color::Color;
 
 pub enum StatusBar {}
 
 impl StatusBar {
     pub fn draw(window: &mut dyn Window, state: &State) {
-        let (width, height) = window.size();
-
-        write!(
-            window,
-            "{}{}",
-            color::Bg(Self::get_color(state)),
-            color::Fg(color::Black)
-        );
+        let (width, _) = window.size();
 
         let status_message = Self::get_status_message(state);
+        let bg = Self::get_color(state);
 
-        for y in 0..height {
-            window.go_to(1, y + 1);
+        for x in 0..width {
+            let c = status_message.chars().nth(x as usize).unwrap_or(' ');
 
-            for x in 0..width {
-                let mut chars = status_message.chars();
+            if matches!(state.mode, Mode::Edit | Mode::Save) {
+                // Edit offset is 0, Save offset is length of "Saving to ./"
+                let offset = match state.mode {
+                    Mode::Edit => 0,
+                    Mode::Save => 12,
+                    _ => 0,
+                };
 
-                if matches!(state.mode, Mode::Edit | Mode::Save) {
-                    // Edit offset is 0, Save offset is length of "Saving to ./"
-                    let offset = match state.mode {
-                        Mode::Edit => 0,
-                        Mode::Save => 12,
-                        _ => 0,
-                    };
-
-                    if x as usize == state.edit_cursor + offset {
-                        write!(
-                            window,
-                            "{}{}",
-                            color::Bg(color::Black),
-                            color::Fg(color::White)
-                        );
-                    } else if x as usize == state.edit_cursor + offset + 1 {
-                        write!(
-                            window,
-                            "{}{}",
-                            color::Bg(Self::get_color(state)),
-                            color::Fg(color::Black)
-                        );
-                    }
+                // Implement a cursor by inverting the colors at the cursor position
+                if x as usize == state.edit_cursor + offset {
+                    window.write_at(x, 0, c, Color::Black, Color::White);
+                    continue;
                 }
-
-                write!(
-                    window,
-                    "{}",
-                    chars.nth(x as usize).unwrap_or(' ').to_string()
-                )
             }
+
+            window.write_at(x, 0, c, bg, Color::Black);
         }
     }
 
-    pub fn get_color(State { mode, .. }: &State) -> &dyn Color {
+    pub fn get_color(State { mode, .. }: &State) -> Color {
         match mode {
-            Mode::Nav => &color::LightBlue,
-            Mode::Edit => &color::LightGreen,
-            Mode::Save => &color::LightYellow,
+            Mode::Nav => Color::LightBlue,
+            Mode::Edit => Color::LightGreen,
+            Mode::Save => Color::LightYellow,
         }
     }
 

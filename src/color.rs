@@ -1,5 +1,6 @@
 use termion::color;
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum Color {
     Black,
     Red,
@@ -19,6 +20,7 @@ pub enum Color {
     LightCyan,
     LightWhite,
 }
+use Color::*;
 
 static LIGHT_GRAY_FG: &str = "\x1B[38;2;220;220;220m";
 static LIGHT_GRAY_BG: &str = "\x1B[48;2;220;220;220m";
@@ -27,8 +29,7 @@ static GRAY_FG: &str = "\x1B[38;2;150;150;150m";
 static GRAY_BG: &str = "\x1B[48;2;150;150;150m";
 
 impl Color {
-    pub fn bg(&self) -> &str {
-        use Color::*;
+    pub fn bg(&self) -> String {
         match self {
             Black => color::Black.bg_str(),
             Red => color::Red.bg_str(),
@@ -47,11 +48,10 @@ impl Color {
             LightMagenta => color::LightMagenta.bg_str(),
             LightCyan => color::LightCyan.bg_str(),
             LightWhite => LIGHT_GRAY_BG,
-        }
+        }.to_string()
     }
 
-    pub fn fg(&self) -> &str {
-        use Color::*;
+    pub fn fg(&self) -> String {
         match self {
             Black => color::Black.fg_str(),
             Red => color::Red.fg_str(),
@@ -70,6 +70,6 @@ impl Color {
             LightMagenta => color::LightMagenta.fg_str(),
             LightCyan => color::LightCyan.fg_str(),
             LightWhite => LIGHT_GRAY_FG,
-        }
+        }.to_string()
     }
 }
