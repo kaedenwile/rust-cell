@@ -8,6 +8,14 @@ pub fn save(state: &State, filepath: &str) {
 
     let mut csv = String::new();
 
+    // First row is column widths
+    csv.push(','); // first column will be ignored
+    for width in state.sheet.column_widths.iter() {
+        csv.push_str(&width.to_string());
+        csv.push(',');
+    }
+    csv.push('\n');
+
     for row in state.sheet.cells.iter_rows() {
         csv.push(','); // first column will be ignored
         for cell in row {
@@ -34,7 +42,12 @@ pub fn load(filepath: &str) -> State {
 
     for (r, row_str) in csv.lines().enumerate() {
         for (c, cell) in row_str.split(',').skip(1).enumerate() {
-            state.sheet.cells.set_at((r as u16, c as u16), cell.to_string());
+            // First row is column widths
+            if r == 0 {
+                state.sheet.column_widths.push(cell.parse::<u16>().unwrap_or(8));
+            } else {
+                state.sheet.cells.set_at(((r - 1) as u16, c as u16), cell.to_string())
+            }
         }
     }
 

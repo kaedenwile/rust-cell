@@ -17,6 +17,15 @@ impl State {
                 self.save_edits();
                 self.cursor = self.cursor.move_h(1);
             }
+            Key::Up => {
+                self.save_edits();
+                self.cursor = self.cursor.move_v(-1);
+            }
+            Key::Down => {
+                self.save_edits();
+                self.cursor = self.cursor.move_v(1);
+            }
+
             Key::Esc => self.mode = Mode::Nav,
 
             // Terminal shortcuts

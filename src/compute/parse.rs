@@ -112,7 +112,7 @@ fn make_node(raw_terms: Vec<ParenStack>) -> Result<Node, String> {
             ParenStack::Term(term) if resolve_reference(&term).is_ok() => {
                 Computed::Computed(Node::Reference(term))
             }
-            ParenStack::Term(term) => match term.parse::<f32>() {
+            ParenStack::Term(term) => match term.parse::<f64>() {
                 Ok(f) => Computed::Computed(Node::Literal(f)),
                 Err(_) => Computed::Raw(term),
             },

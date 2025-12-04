@@ -12,6 +12,11 @@ impl State {
             Key::Ctrl('z') => self.undo(),
             Key::Ctrl('y') => self.redo(),
 
+            // Column width
+            Key::Ctrl('=') => self.column_width(1),
+            Key::Ctrl('+') => self.column_width(1),
+            Key::Ctrl('-') => self.column_width(-1),
+
             // Start editing existing content
             Key::Ctrl('e') => self.input_edit_cell(),
 
@@ -49,7 +54,8 @@ impl State {
             // Or just start typing to overwrite the cell
             Key::Char(l) => self.input_overwrite_cell(l),
 
-            _ => { println!("Unhandled nav input: {:?}", input) }
+            // _ => { println!("Unhandled nav input: {:?}", input) }
+            _ => {}
         }
     }
 
@@ -67,6 +73,14 @@ impl State {
             self.mode = Mode::Edit;
             self.edit_buffer = ch.to_string();
             self.edit_cursor = 1;
+        }
+    }
+
+    fn column_width(&mut self, direction: i16) {
+        if let Cursor::Single((_, c)) = self.cursor {
+            let current_width = self.sheet.column_widths.get(c as usize).unwrap_or(&10);
+            let new_width = current_width.saturating_add_signed(direction).max(1);
+            self.sheet.column_widths[c as usize] = new_width;
         }
     }
 }

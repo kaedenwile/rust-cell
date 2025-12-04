@@ -5,7 +5,7 @@ pub struct CellComputation {
     pub is_computed: bool,
     pub error: bool,
     pub display: String,
-    pub value: Option<f32>,
+    pub value: Option<f64>,
 }
 
 impl CellComputation {
@@ -20,7 +20,7 @@ impl CellComputation {
 
     pub fn string(string: String) -> Self {
         // Convert to float with best effort
-        let value = string.parse::<f32>().ok();
+        let value = string.parse::<f64>().ok();
 
         CellComputation {
             is_computed: true,
@@ -39,7 +39,7 @@ impl CellComputation {
         }
     }
 
-    pub fn value(value: f32) -> Self {
+    pub fn value(value: f64) -> Self {
         CellComputation {
             is_computed: true,
             error: false,

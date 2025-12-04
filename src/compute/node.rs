@@ -4,7 +4,7 @@ use regex::Regex;
 
 #[derive(Debug, PartialEq)]
 pub enum Node {
-    Literal(f32),
+    Literal(f64),
     // UnaryOp(UnaryOp, Node),
     BinaryOp(BinaryOp, Box<Node>, Box<Node>),
     // Function(Function, Vec<Node>),
@@ -27,7 +27,7 @@ impl Node {
         }
     }
 
-    pub fn compute(self, state: &Grid<CellComputation>) -> Result<f32, String> {
+    pub fn compute(self, state: &Grid<CellComputation>) -> Result<f64, String> {
         match self {
             Node::Literal(num) => Ok(num),
             Node::BinaryOp(op, left, right) => {

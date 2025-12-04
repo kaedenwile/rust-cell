@@ -6,7 +6,7 @@ pub struct State {
     pub mode: Mode,
     pub sheet: Sheet,
 
-    pub scroll: Address,
+    // pub scroll: Address,
     pub cursor: Cursor,
 
     pub edit_buffer: String,
@@ -23,7 +23,7 @@ impl State {
         State {
             mode: Mode::Nav,
             sheet: Sheet::new(),
-            scroll: (0, 0),
+            // scroll: (0, 0),
             cursor: Cursor::Single((0, 0)),
 
             edit_buffer: String::new(),
