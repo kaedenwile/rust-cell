@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::cursor::Cursor;
-use crate::state::{Mode, State};
+use crate::state::{Address, Mode, State};
 use crate::window::Window;
 
 pub enum StatusBar {}
@@ -45,30 +45,42 @@ impl StatusBar {
     pub fn get_status_message(state: &State) -> String {
         match state.mode {
             Mode::Nav => match state.cursor {
-                Cursor::Single((r, c)) => {
-                    let cell = state.get_at((r, c));
+                Cursor::Single((r, c)) =>
                     format!(
                         "{}{} {}",
                         r + 1,
                         State::col_name(c as u8 + 1),
-                        if cell.computed.error { &cell.computed.display } else { &cell.value }
-                    )
-                }
+                        StatusBar::cell_display_value(state, (r, c))
+                    ),
                 // TODO improve range display
-                Cursor::Range((r, c), _) => {
-                    let cell = state.get_at((r, c));
+                Cursor::Range((r, c), _) =>
                     format!(
                         "{}{} {}",
                         r + 1,
                         State::col_name(c as u8 + 1),
-                        if cell.computed.error { &cell.computed.display } else { &cell.value }
-                    )
-                }
+                        StatusBar::cell_display_value(state, (r, c))
+                    ),
                 Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
                 Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
             },
             Mode::Edit => state.edit_buffer.to_string(),
             Mode::Save => format!("Saving to ./{}", &state.edit_buffer),
+        }
+    }
+
+    fn cell_display_value(state: &State, addr: Address) -> &str {
+        if let Some(value) = state.sheet.cells.get_at(addr) {
+            if let Some(cell) = state.sheet.rendered_cells.get_at(addr) {
+                if cell.error {
+                    &cell.display
+                } else {
+                    value
+                }
+            } else {
+                value
+            }
+        } else {
+            ""
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::state::{DisplayCell, State};
+use crate::state::State;
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -8,10 +8,10 @@ pub fn save(state: &State, filepath: &str) {
 
     let mut csv = String::new();
 
-    for row in state.content.iter() {
+    for row in state.sheet.cells.iter_rows() {
         csv.push(','); // first column will be ignored
         for cell in row {
-            csv.push_str(cell.value.as_str());
+            csv.push_str(cell);
             csv.push(',');
         }
         csv.push('\n');
@@ -34,7 +34,7 @@ pub fn load(filepath: &str) -> State {
 
     for (r, row_str) in csv.lines().enumerate() {
         for (c, cell) in row_str.split(',').skip(1).enumerate() {
-            state.set_at((r as u16, c as u16), DisplayCell::new(cell.to_string()));
+            state.sheet.cells.set_at((r as u16, c as u16), cell.to_string());
         }
     }
 

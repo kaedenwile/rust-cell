@@ -1,4 +1,5 @@
-use crate::state::State;
+use crate::compute::CellComputation;
+use crate::sheet::Grid;
 use regex::Regex;
 
 #[derive(Debug, PartialEq)]
@@ -26,7 +27,7 @@ impl Node {
         }
     }
 
-    pub fn compute(self, state: &State) -> Result<f32, String> {
+    pub fn compute(self, state: &Grid<CellComputation>) -> Result<f32, String> {
         match self {
             Node::Literal(num) => Ok(num),
             Node::BinaryOp(op, left, right) => {
@@ -58,24 +59,30 @@ impl Node {
                     return Err(addr_result.unwrap_err());
                 };
 
-                let cell = state.get_at(addr);
+                let Some(cell) = state.get_at(addr) else {
+                    panic!("REFERENCE IS NOT COMPUTED @ {} {:?}", reference, addr);
+                };
 
-                if cell.value.is_empty() {
-                    return Err(format!("Error: Empty value @ {}", reference));
-                }
-
-                if !cell.computed.is_computed {
+                if !cell.is_computed {
                     panic!("REFERENCE IS NOT COMPUTED @ {} {:?}", reference, addr);
                 }
 
-                if cell.computed.error {
+                if cell.error {
                     return Err(format!(
                         "Err@{}: \"{}\"",
-                        reference, cell.computed.display
+                        reference,
+                        cell.display
                     ));
                 }
 
-                Ok(cell.computed.value.unwrap())
+                let Some(value) = cell.value else {
+                    if cell.display.is_empty() {
+                        return Err(format!("Error: Empty value @ {}", reference));
+                    }
+                    return Err(format!("Error: Unparsable value @ {}", reference));
+                };
+
+                Ok(value)
             }
         }
     }

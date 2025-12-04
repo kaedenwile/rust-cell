@@ -21,6 +21,7 @@ mod edit_mode;
 mod nav_mode;
 mod cursor;
 mod keyboard;
+mod sheet;
 
 fn main() {
     let screen = &mut screen();
@@ -32,7 +33,7 @@ fn main() {
         state = load(&args[1]);
     }
 
-    compute::bake(&mut state);
+    state.sheet.bake();
     layout.draw(&state);
 
     for event in events() {
@@ -46,7 +47,7 @@ fn main() {
             }
         }
 
-        compute::bake(&mut state);
+        state.sheet.bake();
         layout.draw(&state);
     }
 }

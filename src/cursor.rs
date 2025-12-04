@@ -174,13 +174,13 @@ impl State {
             }
         };
 
-        let start_is_empty = self.get_at(start).is_empty();
+        let start_is_empty = self.sheet.is_empty_at(start);
         let mut prev = start;
         let mut prev_is_empty = start_is_empty;
 
         loop {
             let next = take_step(prev);
-            let next_is_empty = self.get_at(next).is_empty();
+            let next_is_empty = self.sheet.is_empty_at(next);
 
             if next == prev {
                 return prev; // no movement possible

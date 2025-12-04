@@ -12,7 +12,7 @@ impl State {
     pub fn handle_input_save_mode(&mut self, input: Key) {
         let state = self;
         match input {
-            Key::Char('\n') => {
+            Key::Enter => {
                 state.filename = state.edit_buffer.clone();
                 save(&state, &state.edit_buffer);
                 state.mode = Mode::Nav;

@@ -1,8 +1,11 @@
 use crate::cursor::Cursor;
+use crate::sheet::Sheet;
 
+/// The current active state of the program
 pub struct State {
     pub mode: Mode,
-    pub content: Vec<Vec<DisplayCell>>,
+    pub sheet: Sheet,
+
     pub scroll: Address,
     pub cursor: Cursor,
 
@@ -19,7 +22,7 @@ impl State {
     pub fn blank() -> Self {
         State {
             mode: Mode::Nav,
-            content: vec![],
+            sheet: Sheet::new(),
             scroll: (0, 0),
             cursor: Cursor::Single((0, 0)),
 
@@ -41,64 +44,31 @@ impl State {
         let Mode::Edit = self.mode else {
             panic!("Called finish_edit() on a non-edit Mode ");
         };
-        let Cursor::Single((r, c)) = self.cursor else {
+        let Cursor::Single(addr) = self.cursor else {
             panic!("Non-single cursor in EDIT mode");
         };
 
-        let mut row = &mut self.get_row(r as usize);
-        let prev_cell = State::get_col(&mut row, c as usize);
-        let previous_value = prev_cell.value.clone();
-
         self.mode = Mode::Nav;
 
+        let previous_value = self.sheet.cells.get_at(addr).cloned().unwrap_or(String::new());
         self.undo_stack.push(vec![Action {
-            addr: (r, c),
+            addr,
             previous_value,
-            new_value: self.edit_buffer.clone(),
         }]);
         self.redo_stack.clear();
 
-        self.set_at((r, c), DisplayCell::new(self.edit_buffer.clone()));
-    }
-
-    fn get_row(&mut self, r: usize) -> &mut Vec<DisplayCell> {
-        while r >= self.content.len() {
-            self.content.push(vec![])
-        }
-
-        &mut self.content[r]
-    }
-
-    fn get_col(row: &mut Vec<DisplayCell>, c: usize) -> &DisplayCell {
-        while c >= row.len() {
-            row.push(DisplayCell::blank())
-        }
-
-        &row[c]
-    }
-
-    pub fn get_at(&self, (row, col): Address) -> &DisplayCell {
-        &self
-            .content
-            .get(row as usize)
-            .and_then(|x| x.get(col as usize))
-            .unwrap_or(&BLANK_CELL)
-    }
-
-    pub fn set_at(&mut self, (r, c): Address, cell: DisplayCell) {
-        let row = &mut self.get_row(r as usize);
-        let _ = State::get_col(row, c as usize);
-        row[c as usize] = cell;
+        self.sheet.cells.set_at(addr, self.edit_buffer.clone());
     }
 
     pub fn clear_at_cursor(&mut self) {
         // Track cleared values for undo
         let mut cleared_values: Vec<(Address, String)> = vec![];
         let mut clear_at = |state: &mut State, addr: Address| {
-            let cell = state.get_at(addr);
-            if !cell.is_empty() {
-                cleared_values.push((addr, cell.value.clone()));
-                state.set_at(addr, DisplayCell::blank())
+            if let Some(value) = state.sheet.cells.get_at(addr) {
+                if !value.is_empty() {
+                    cleared_values.push((addr, value.clone()));
+                    state.sheet.cells.set_at(addr, String::new())
+                }
             }
         };
 
@@ -113,14 +83,13 @@ impl State {
                 }
             }
             Cursor::Row(r) => {
-                let columns = self.content[r as usize].len();
-                for c in 0..columns {
-                    clear_at(self, (r, c as u16))
+                for c in 0..self.sheet.cells.num_columns_in_row(r) {
+                    clear_at(self, (r, c))
                 }
             }
             Cursor::Column(c) => {
-                for r in 0..self.content.len() {
-                    clear_at(self, (r as u16, c));
+                for r in 0..self.sheet.cells.num_rows() {
+                    clear_at(self, (r, c));
                 }
             }
         }
@@ -131,7 +100,6 @@ impl State {
                 .map(|(addr, previous_value)| Action {
                     addr,
                     previous_value,
-                    new_value: String::new(),
                 })
                 .collect();
             self.undo_stack.push(actions);
@@ -145,9 +113,7 @@ impl State {
         };
 
         for action in &actions {
-            let (r, c) = action.addr;
-            let row = &mut self.get_row(r as usize);
-            row[c as usize].value = action.previous_value.clone();
+            self.sheet.cells.set_at(action.addr, action.previous_value.clone());
         }
 
         self.redo_stack.push(actions);
@@ -159,9 +125,7 @@ impl State {
         };
 
         for action in &actions {
-            let (r, c) = action.addr;
-            let row = &mut self.get_row(r as usize);
-            row[c as usize].value = action.new_value.clone();
+            self.sheet.cells.set_at(action.addr, action.previous_value.clone());
         }
 
         self.undo_stack.push(actions);
@@ -181,91 +145,4 @@ pub type Address = (u16, u16);
 pub struct Action {
     pub addr: Address,
     pub previous_value: String,
-    pub new_value: String,
-}
-
-static BLANK_CELL: DisplayCell = DisplayCell::blank();
-
-#[derive(Clone)]
-pub struct CellComputation {
-    /// Has this value been computed yet or is it still pending?
-    /// Can be true even when value is None
-    pub is_computed: bool,
-    pub error: bool,
-    pub display: String,
-    pub value: Option<f32>,
-}
-
-impl CellComputation {
-    pub const fn new() -> Self {
-        CellComputation {
-            is_computed: false,
-            error: false,
-            display: String::new(),
-            value: None,
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.is_computed = false;
-        self.display.clear();
-    }
-
-    pub fn set_string(&mut self, value: String) {
-        self.is_computed = true;
-        self.error = false;
-        // Convert to float with best effort
-        self.value = (&value).parse::<f32>().ok();
-        self.display = value;
-    }
-
-    pub fn set_error(&mut self, err: String) {
-        self.is_computed = true;
-        self.error = true;
-        self.display = err;
-        self.value = None;
-    }
-
-    pub fn set_computed(&mut self, value: f32) {
-        self.is_computed = true;
-        self.error = false;
-        self.display = format!("{}", value);
-        self.value = Some(value);
-    }
-}
-
-#[derive(Clone)]
-pub struct DisplayCell {
-    pub alignment: Alignment,
-    pub value: String,
-    pub computed: CellComputation,
-}
-
-impl DisplayCell {
-    pub const fn new(value: String) -> Self {
-        DisplayCell {
-            value,
-            computed: CellComputation::new(),
-            alignment: Alignment::Left,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.value.is_empty()
-    }
-
-    pub const fn blank() -> Self {
-        DisplayCell::new(String::new())
-    }
-
-    pub fn with_alignment(mut self, alignment: Alignment) -> Self {
-        self.alignment = alignment;
-        self
-    }
-}
-
-#[derive(Clone)]
-pub enum Alignment {
-    Left,
-    Right,
 }

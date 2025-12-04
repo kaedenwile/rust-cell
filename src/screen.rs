@@ -1,13 +1,14 @@
 use crate::color::Color;
+use crate::compute::CellComputation;
 use crate::cursor::Cursor;
-use crate::state::{Address, Alignment, DisplayCell, Mode, State};
+use crate::state::{Address, Mode, State};
 use crate::window::Window;
 
-enum Position<'a> {
+enum Position {
     Pivot,
     ColumnHeader(u16, u16),
     RowHeader(u16, u16),
-    InsideCell(Address, &'a DisplayCell, u16),
+    InsideCell(Address, CellComputation, u16),
 }
 
 static CELL_WIDTH: u16 = 8;
@@ -37,7 +38,8 @@ pub fn draw(window: &mut dyn Window, state: &State) {
             } else if x < 3 {
                 RowHeader(row - 1, text_pos)
             } else {
-                let cell = state.get_at((row - 1, col - 1));
+                let cell = state.sheet.rendered_cells.get_at((row - 1, col - 1))
+                    .cloned().unwrap_or_default();
                 InsideCell((row - 1, col - 1), cell, text_pos)
             };
 
@@ -61,8 +63,8 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                 (Pivot, _) => Color::Black
             };
 
-            let fg = match position {
-                InsideCell(_, cell, _) if cell.computed.error
+            let fg = match &position {
+                InsideCell(_, cell, _) if cell.error
                 => Color::Red,
                 _ => Color::Black
             };
@@ -89,26 +91,26 @@ pub fn draw(window: &mut dyn Window, state: &State) {
 
                     let content = match state.mode {
                         Mode::Edit if is_sole_selection => &state.edit_buffer,
-                        _ => &cell.computed.display,
+                        _ => &cell.display,
                     };
                     let mut chars = content.chars();
 
-                    match &cell.alignment {
-                        Alignment::Left => {
-                            if content.len() > 8 && text_pos == 7 {
-                                Some(ELLIPSIS)
-                            } else {
-                                chars.nth(text_pos as usize)
-                            }
-                        }
-                        Alignment::Right => {
-                            if content.len() > 8 && text_pos == 0 {
-                                Some(ELLIPSIS)
-                            } else {
-                                chars.nth_back(8 - text_pos as usize)
-                            }
-                        }
-                    }.unwrap_or(' ')
+                    // match &cell.alignment {
+                    //     Alignment::Left => {
+                    if content.len() > 8 && text_pos == 7 {
+                        ELLIPSIS
+                    } else {
+                        chars.nth(text_pos as usize).unwrap_or(' ')
+                    }
+                    //     }
+                    //     Alignment::Right => {
+                    //         if content.len() > 8 && text_pos == 0 {
+                    //             Some(ELLIPSIS)
+                    //         } else {
+                    //             chars.nth_back(8 - text_pos as usize)
+                    //         }
+                    //     }
+                    // }.unwrap_or(' ')
                 }
             };
 

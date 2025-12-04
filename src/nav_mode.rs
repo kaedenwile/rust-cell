@@ -56,8 +56,8 @@ impl State {
     fn input_edit_cell(&mut self) {
         if let Cursor::Single(addr) = self.cursor {
             self.mode = Mode::Edit;
-            let edit_cell = &self.get_at(addr);
-            self.edit_buffer = edit_cell.value.clone();
+            let edit_cell = self.sheet.cells.get_at(addr);
+            self.edit_buffer = edit_cell.cloned().unwrap_or_default();
             self.edit_cursor = self.edit_buffer.len();
         }
     }
