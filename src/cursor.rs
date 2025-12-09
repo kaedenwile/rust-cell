@@ -1,5 +1,7 @@
 use crate::state::{Address, State};
 use std::cmp::{max, min};
+use std::fmt;
+use std::fmt::Display;
 
 static MAX_ROW: u16 = 1000;
 static MAX_COL: u16 = 1000;
@@ -18,6 +20,22 @@ pub enum Cursor {
 enum Orientation {
     Horizontal,
     Vertical,
+}
+
+impl Display for Cursor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Cursor::Single((r, c)) => write!(f, "{}{}", r + 1, State::col_name(c as u8 + 1)),
+            Cursor::Range(start, end) => write!(f, "{}{}:{}{}",
+                                                start.0 + 1,
+                                                State::col_name(start.1 as u8 + 1),
+                                                end.0 + 1,
+                                                State::col_name(end.1 as u8 + 1)
+            ),
+            Cursor::Row(r) => write!(f, "{r}:{r}", r = r + 1),
+            Cursor::Column(c) => write!(f, "{c}:{c}", c = State::col_name(c as u8 + 1)),
+        }
+    }
 }
 
 impl Cursor {
@@ -146,7 +164,7 @@ impl Cursor {
         match *self {
             Cursor::Single(addr) => {
                 let jump_addr = state.jump_addr(addr, orientation, direction);
-                if (addr == jump_addr) {
+                if addr == jump_addr {
                     self.clone()
                 } else {
                     Cursor::Range(addr, jump_addr)
@@ -154,7 +172,7 @@ impl Cursor {
             }
             Cursor::Range(start, end) => {
                 let jump_addr = state.jump_addr(end, orientation, direction);
-                if (start == jump_addr) {
+                if start == jump_addr {
                     Cursor::Single(jump_addr)
                 } else {
                     Cursor::Range(start, jump_addr)

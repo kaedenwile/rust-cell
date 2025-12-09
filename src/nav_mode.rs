@@ -17,6 +17,9 @@ impl State {
             Key::Ctrl('+') => self.column_width(1),
             Key::Ctrl('-') => self.column_width(-1),
 
+            // Format
+            Key::Ctrl('f') => self.enter_format_mode(),
+
             // Start editing existing content
             Key::Ctrl('e') => self.input_edit_cell(),
 
@@ -69,7 +72,7 @@ impl State {
     }
 
     fn input_overwrite_cell(&mut self, ch: char) {
-        if let Cursor::Single(addr) = self.cursor {
+        if let Cursor::Single(_) = self.cursor {
             self.mode = Mode::Edit;
             self.edit_buffer = ch.to_string();
             self.edit_cursor = 1;

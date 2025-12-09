@@ -9,7 +9,7 @@ pub trait Window {
     // get size of the window
     fn size(&self) -> (u16, u16);
 
-    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {}
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color);
 }
 
 // The base screen object

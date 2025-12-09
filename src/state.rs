@@ -1,5 +1,6 @@
 use crate::cursor::Cursor;
 use crate::sheet::Sheet;
+use crate::styling::StylingState;
 
 /// The current active state of the program
 pub struct State {
@@ -16,6 +17,8 @@ pub struct State {
 
     pub undo_stack: Vec<Vec<Action>>,
     pub redo_stack: Vec<Vec<Action>>,
+
+    pub styling_state: StylingState,
 }
 
 impl State {
@@ -33,6 +36,8 @@ impl State {
 
             undo_stack: vec![],
             redo_stack: vec![],
+
+            styling_state: StylingState::default(),
         }
     }
 
@@ -60,6 +65,32 @@ impl State {
         self.sheet.cells.set_at(addr, self.edit_buffer.clone());
     }
 
+    pub fn iter_cursor(&self) -> Vec<(u16, u16)> {
+        let mut addresses = vec![];
+        match self.cursor {
+            Cursor::Single(addr) => addresses.push(addr),
+            Cursor::Range(start, end) => {
+                let (l, r, t, b) = Cursor::bounds(start, end);
+                for y in t..=b {
+                    for x in l..=r {
+                        addresses.push((y, x))
+                    }
+                }
+            }
+            Cursor::Row(r) => {
+                for c in 0..self.sheet.cells.num_columns_in_row(r) {
+                    addresses.push((r, c))
+                }
+            }
+            Cursor::Column(c) => {
+                for r in 0..self.sheet.cells.num_rows() {
+                    addresses.push((r, c));
+                }
+            }
+        }
+        addresses
+    }
+
     pub fn clear_at_cursor(&mut self) {
         // Track cleared values for undo
         let mut cleared_values: Vec<(Address, String)> = vec![];
@@ -72,26 +103,8 @@ impl State {
             }
         };
 
-        match self.cursor {
-            Cursor::Single(addr) => clear_at(self, addr),
-            Cursor::Range(start, end) => {
-                let (l, r, t, b) = Cursor::bounds(start, end);
-                for y in t..=b {
-                    for x in l..=r {
-                        clear_at(self, (y, x))
-                    }
-                }
-            }
-            Cursor::Row(r) => {
-                for c in 0..self.sheet.cells.num_columns_in_row(r) {
-                    clear_at(self, (r, c))
-                }
-            }
-            Cursor::Column(c) => {
-                for r in 0..self.sheet.cells.num_rows() {
-                    clear_at(self, (r, c));
-                }
-            }
+        for addr in self.iter_cursor() {
+            clear_at(self, addr);
         }
 
         if !cleared_values.is_empty() {
@@ -136,6 +149,7 @@ pub enum Mode {
     Nav,
     Edit,
     Save,
+    Format,
 }
 
 /// A cell location in the spreadsheet (row, column)

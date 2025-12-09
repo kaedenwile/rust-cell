@@ -39,6 +39,7 @@ impl StatusBar {
             Mode::Nav => Color::LightBlue,
             Mode::Edit => Color::LightGreen,
             Mode::Save => Color::LightYellow,
+            Mode::Format => Color::LightMagenta,
         }
     }
 
@@ -47,24 +48,15 @@ impl StatusBar {
             Mode::Nav => match state.cursor {
                 Cursor::Single((r, c)) =>
                     format!(
-                        "{}{} {}",
-                        r + 1,
-                        State::col_name(c as u8 + 1),
+                        "{} {}",
+                        state.cursor,
                         StatusBar::cell_display_value(state, (r, c))
                     ),
-                // TODO improve range display
-                Cursor::Range((r, c), _) =>
-                    format!(
-                        "{}{} {}",
-                        r + 1,
-                        State::col_name(c as u8 + 1),
-                        StatusBar::cell_display_value(state, (r, c))
-                    ),
-                Cursor::Row(r) => format!("{r}:{r}", r = r + 1),
-                Cursor::Column(c) => format!("{c}:{c}", c = State::col_name(c as u8 + 1)),
+                _ => format!("{}", state.cursor),
             },
             Mode::Edit => state.edit_buffer.to_string(),
             Mode::Save => format!("Saving to ./{}", &state.edit_buffer),
+            Mode::Format => format!("Formatting {}", state.cursor),
         }
     }
 

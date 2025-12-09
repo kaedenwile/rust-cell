@@ -2,13 +2,14 @@ use crate::color::Color;
 use crate::compute::CellComputation;
 use crate::cursor::Cursor;
 use crate::state::{Address, Mode, State};
+use crate::styling::CellStyles;
 use crate::window::Window;
 
 enum Position {
     Pivot,
     ColumnHeader(u16),
     RowHeader(u16),
-    InsideCell(Address, CellComputation),
+    InsideCell(Address, CellComputation, CellStyles),
 }
 
 static CELL_WIDTH: u16 = 8;
@@ -44,16 +45,17 @@ pub fn draw(window: &mut dyn Window, state: &State) {
             } else if x < 3 {
                 RowHeader(row - 1)
             } else {
-                let cell = state.sheet.rendered_cells.get_at((row - 1, col - 1))
-                    .cloned().unwrap_or_default();
-                InsideCell((row - 1, col - 1), cell)
+                let addr = (row - 1, col - 1);
+                let cell = state.sheet.rendered_cells.get_at(addr).cloned().unwrap_or_default();
+                let styles = state.sheet.cell_styling.get_at(addr).cloned().unwrap_or_default();
+                InsideCell(addr, cell, styles)
             };
 
             let bg: Color = match (&position, cursor) {
                 // Highlight cell if cell is selected
-                (InsideCell(address, _), cursor)
+                (InsideCell(address, _, _), cursor)
                 if cursor.contains(*address) => Color::LightWhite,
-                (InsideCell(_, _), _) => Color::White,
+                (InsideCell(_, _, CellStyles { bg, .. }), _) => *bg,
 
                 // Highlight row header if row is selected
                 (RowHeader(row), Cursor::Row(cursor_row))
@@ -70,9 +72,9 @@ pub fn draw(window: &mut dyn Window, state: &State) {
             };
 
             let fg = match &position {
-                InsideCell(_, cell) if cell.error
-                => Color::Red,
-                _ => Color::Black
+                InsideCell(_, cell, _) if cell.error => Color::Red,
+                InsideCell(_, _, CellStyles { fg, .. }) => *fg,
+                _ => Color::Black,
             };
 
             let val = match position {
@@ -89,7 +91,7 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                     .nth_back((col_width_remaining - 1) as usize)
                     .unwrap_or(' '),
 
-                InsideCell(cell_addr, cell) => {
+                InsideCell(cell_addr, cell, _) => {
                     let is_sole_selection = match state.cursor {
                         Cursor::Single(addr) => addr == cell_addr,
                         _ => false,

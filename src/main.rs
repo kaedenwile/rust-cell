@@ -3,7 +3,7 @@ use crate::filesystem::load;
 use crate::keyboard::Key;
 use crate::layout::ScreenLayout;
 use crate::state::{Mode, State};
-use crate::window::{screen, Window};
+use crate::window::screen;
 use std::env;
 
 mod compute;
@@ -22,6 +22,7 @@ mod nav_mode;
 mod cursor;
 mod keyboard;
 mod sheet;
+mod styling;
 
 fn main() {
     let screen = &mut screen();
@@ -39,11 +40,12 @@ fn main() {
     for event in events() {
         match event {
             AppEvent::Key(Key::Ctrl('q')) => break, // Exit
-            AppEvent::Resize => layout.layout(),
+            AppEvent::Resize => layout.resize(),
             AppEvent::Key(key) => match state.mode {
                 Mode::Nav => state.handle_input_nav_mode(key),
                 Mode::Edit => state.handle_input_edit_mode(key),
                 Mode::Save => state.handle_input_save_mode(key),
+                Mode::Format => state.handle_input_format_mode(key),
             }
         }
 

@@ -4,7 +4,7 @@ use crate::state::{Mode, State};
 
 impl State {
     pub fn handle_input_edit_mode(&mut self, input: Key) {
-        let Cursor::Single(addr) = self.cursor else {
+        let Cursor::Single(_) = self.cursor else {
             panic!("DEV ERROR: Non-single cursor in EDIT mode");
         };
 

@@ -1,4 +1,5 @@
 use crate::compute::CellComputation;
+use crate::styling::CellStyles;
 
 /// A spreadsheet. Data is stored as sparsely as possible.
 pub struct Sheet {
@@ -6,7 +7,7 @@ pub struct Sheet {
     pub rendered_cells: Grid<CellComputation>,
     pub dirty_cells: Vec<(u16, u16)>,
 
-    // pub cell_styling: Grid<CellStyles>,
+    pub cell_styling: Grid<CellStyles>,
     pub column_widths: Vec<u16>,
 }
 
@@ -16,7 +17,7 @@ impl Sheet {
             cells: Grid::new(),
             rendered_cells: Grid::new(),
             column_widths: vec![],
-            // cell_styling: Grid::new(),
+            cell_styling: Grid::new(),
             dirty_cells: vec![],
         }
     }
