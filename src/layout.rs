@@ -37,6 +37,9 @@ impl<'a> ScreenLayout<'a> {
             _ => (width, 0),
         };
 
+        // Run safely in IntelliJ
+        if height <= 2 { return; }
+
         Menu::draw(&mut Frame::new(self.screen, (0, 0), (width, 1)), &state);
         draw(&mut Frame::new(self.screen, (0, 1), (primary_w, height - 2)), &state);
         StatusBar::draw(&mut Frame::new(self.screen, (0, height - 1), (primary_w, 1)), &state);

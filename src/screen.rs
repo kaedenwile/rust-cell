@@ -90,6 +90,17 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                 _ => Color::Black,
             };
 
+            let CellStyles { bold, italic, underline, .. } = match &position {
+                // Apply formatting styles if in format mode and cell is selected
+                InsideCell(address, _, _)
+                if cursor.contains(*address) && matches!(state.mode, Mode::Format) =>
+                    state.styling_state.to_cell_styles(),
+                // Normal cell styles
+                InsideCell(_, _, cell_styles) => cell_styles.clone(),
+                // Headers are default style
+                _ => CellStyles::default(),
+            };
+
             let val = match position {
                 Pivot => ' ',
 
@@ -135,7 +146,7 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                 }
             };
 
-            window.write_at(x, y, val, bg, fg);
+            window.write_at(x, y, val, bg, fg, bold, italic, underline);
         }
     }
 }

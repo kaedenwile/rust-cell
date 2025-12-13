@@ -25,12 +25,12 @@ impl StatusBar {
 
                 // Implement a cursor by inverting the colors at the cursor position
                 if x as usize == state.edit_cursor + offset {
-                    window.write_at(x, 0, c, Color::Black, Color::White);
+                    window.write_at(x, 0, c, Color::Black, Color::White, false, false, false);
                     continue;
                 }
             }
 
-            window.write_at(x, 0, c, bg, Color::Black);
+            window.write_at(x, 0, c, bg, Color::Black, false, false, false);
         }
     }
 

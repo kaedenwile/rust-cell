@@ -24,6 +24,16 @@ impl StylingState {
             fg: styles.fg,
         }
     }
+
+    pub fn to_cell_styles(&self) -> CellStyles {
+        CellStyles {
+            bold: self.bold,
+            italic: self.italic,
+            underline: self.underline,
+            bg: self.bg,
+            fg: self.fg,
+        }
+    }
 }
 
 impl Default for StylingState {

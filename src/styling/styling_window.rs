@@ -1,5 +1,5 @@
 use crate::color::Color::{Black, Gray, LightWhite};
-use crate::rich_text;
+use crate::{bold, rich_text, underline};
 use crate::rich_text::RichTextChar;
 use crate::state::State;
 use crate::window::Window;
@@ -16,11 +16,11 @@ impl StylingWindow {
 
         let lines = [
             rich_text!(""),
-            rich_text!(RichTextStyle::Bold, "Styling Options", RichTextStyle::NoBold),
+            bold!("Styling Options"),
             rich_text!(""),
-            rich_text!("[", if styling_state.bold { "B" } else { " " }, "] Bold      "),
-            rich_text!("[", if styling_state.italic { "I" } else { " " }, "] Italic    "),
-            rich_text!("[", if styling_state.underline { "U" } else { " " }, "] Underline "),
+            rich_text!("[", if styling_state.bold { "B" } else { " " }, "] ", underline!("B"), "old"),
+            rich_text!("[", if styling_state.italic { "I" } else { " " }, "] ", underline!("I"), "talic"),
+            rich_text!("[", if styling_state.underline { "U" } else { " " }, "] ", underline!("U"), "nderline"),
             rich_text!(""),
             rich_text!("Foreground: ",
                 RichTextStyle::Foreground(styling_state.fg),
@@ -63,7 +63,7 @@ impl StylingWindow {
                     (ch.fg.unwrap_or(Black), ch.bg.unwrap_or(Gray))
                 };
 
-                window.write_at(x, y, ch.ch, bg, fg);
+                window.write_at(x, y, ch.ch, bg, fg, ch.bold, ch.italic, ch.underline);
             }
         }
     }

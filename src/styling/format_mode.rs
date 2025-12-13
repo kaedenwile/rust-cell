@@ -26,16 +26,31 @@ impl State {
             Key::Down => state.styling_state.cursor = min(4, state.styling_state.cursor + 1),
 
             Key::Char(' ') => state.toggle_selected_styling_option(),
+            Key::Char('b') => state.toggle_bold(),
+            Key::Char('i') => state.toggle_italic(),
+            Key::Char('u') => state.toggle_underline(),
 
             _ => {}
         }
     }
 
-    pub fn toggle_selected_styling_option(&mut self) {
+    fn toggle_bold(&mut self) {
+        self.styling_state.bold = !self.styling_state.bold;
+    }
+
+    fn toggle_italic(&mut self) {
+        self.styling_state.italic = !self.styling_state.italic;
+    }
+
+    fn toggle_underline(&mut self) {
+        self.styling_state.underline = !self.styling_state.underline;
+    }
+
+    fn toggle_selected_styling_option(&mut self) {
         match self.styling_state.cursor {
-            0 => self.styling_state.bold = !self.styling_state.bold,
-            1 => self.styling_state.italic = !self.styling_state.italic,
-            2 => self.styling_state.underline = !self.styling_state.underline,
+            0 => self.toggle_bold(),
+            1 => self.toggle_italic(),
+            2 => self.toggle_underline(),
             3 => self.styling_state.fg = Color::Blue,
             4 => self.styling_state.bg = Color::LightGreen,
             _ => {}

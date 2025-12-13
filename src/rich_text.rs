@@ -80,6 +80,11 @@ impl RichText {
                         RichTextStyle::BackgroundReset => current_bg = None,
                     }
                 }
+                RichTextWord::RichText(rich_text) => {
+                    for rtc in rich_text.rich_text_chars.iter() {
+                        rich_text_chars.push(rtc.clone());
+                    }
+                }
             }
         }
 
@@ -104,6 +109,7 @@ impl Default for RichText {
 pub enum RichTextWord {
     Text(String),
     Style(RichTextStyle),
+    RichText(RichText),
 }
 
 pub trait RichTextWordConversion {
@@ -122,6 +128,12 @@ impl RichTextWordConversion for RichTextStyle {
     }
 }
 
+impl RichTextWordConversion for RichText {
+    fn rich_text_word(self) -> RichTextWord {
+        RichTextWord::RichText(self)
+    }
+}
+
 #[macro_export]
 macro_rules! rich_text {
     ($($word:expr),* $(,)?) => {
@@ -133,4 +145,31 @@ macro_rules! rich_text {
             $crate::RichText::new(words)
         }
     };
+}
+
+#[macro_export]
+macro_rules! bold {
+    ($($inner:tt)*) => (rich_text!(
+        $crate::RichTextStyle::Bold,
+        $($inner)*,
+        $crate::RichTextStyle::NoBold,
+    ))
+}
+
+#[macro_export]
+macro_rules! italic {
+    ($($inner:tt)*) => (rich_text!(
+        $crate::RichTextStyle::Italic,
+        $($inner)*,
+        $crate::RichTextStyle::NoItalic,
+    ))
+}
+
+#[macro_export]
+macro_rules! underline {
+    ($($inner:tt)*) => (rich_text!(
+        $crate::RichTextStyle::Underline,
+        $($inner)*,
+        $crate::RichTextStyle::NoUnderline,
+    ))
 }

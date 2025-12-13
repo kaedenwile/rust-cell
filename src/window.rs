@@ -1,5 +1,6 @@
 use crate::color::Color;
 use std::cell::RefCell;
+use std::cmp::PartialEq;
 use std::io::{stdout, Write};
 use termion::cursor::HideCursor;
 use termion::raw::IntoRawMode;
@@ -9,7 +10,7 @@ pub trait Window {
     // get size of the window
     fn size(&self) -> (u16, u16);
 
-    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color);
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color, bold: bool, italic: bool, underline: bool);
 }
 
 // The base screen object
@@ -22,20 +23,22 @@ pub struct Screen {
     live_buffer: Vec<Vec<Pixel>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Pixel {
     char: char,
     fg: Color,
     bg: Color,
-    // TODO styles
+    bold: bool,
+    italic: bool,
+    underline: bool,
 }
 
 impl Pixel {
-    fn new(char: char, fg: Color, bg: Color) -> Pixel {
-        Pixel { char, fg, bg }
+    fn new(char: char, fg: Color, bg: Color, bold: bool, italic: bool, underline: bool) -> Pixel {
+        Pixel { char, fg, bg, bold, italic, underline }
     }
     fn blank() -> Pixel {
-        Pixel::new(' ', Color::Magenta, Color::Magenta)
+        Pixel::new(' ', Color::Magenta, Color::Magenta, false, false, false)
     }
 }
 
@@ -63,8 +66,8 @@ impl Window for Screen {
         self.size
     }
 
-    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {
-        self.live_buffer[y as usize][x as usize] = Pixel::new(char, fg, bg);
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color, bold: bool, italic: bool, underline: bool) {
+        self.live_buffer[y as usize][x as usize] = Pixel::new(char, fg, bg, bold, italic, underline);
     }
 }
 
@@ -90,6 +93,9 @@ impl Screen {
         // what are current terminal styles? (Bg, Fg)
         let mut brush_bg: Option<Color> = None;
         let mut brush_fg: Option<Color> = None;
+        let mut brush_bold: bool = false;
+        let mut brush_italic: bool = false;
+        let mut brush_underline: bool = false;
         let mut brush_pos = self.size.0 * self.size.1; // out of bounds
 
         let mut operations: Vec<String> = vec![];
@@ -101,10 +107,7 @@ impl Screen {
                 let live_pixel = &self.live_buffer[y as usize][x as usize];
                 let prev_pixel = &self.prev_buffer[y as usize][x as usize];
 
-                if live_pixel.char != prev_pixel.char
-                    || live_pixel.fg != prev_pixel.fg
-                    || live_pixel.bg != prev_pixel.bg
-                {
+                if *live_pixel != *prev_pixel {
                     if brush_pos != pos {
                         // Move cursor to position (x+1, y+1) because termion is 1-indexed
                         operations.push(termion::cursor::Goto(x + 1, y + 1).to_string())
@@ -117,9 +120,33 @@ impl Screen {
                         operations.push(live_pixel.fg.fg());
                         brush_fg = Some(live_pixel.fg);
                     }
+                    if brush_bold != live_pixel.bold {
+                        if live_pixel.bold {
+                            operations.push(termion::style::Bold.to_string());
+                        } else {
+                            operations.push(termion::style::NoFaint.to_string());
+                        }
+                        brush_bold = live_pixel.bold;
+                    }
+                    if brush_italic != live_pixel.italic {
+                        if live_pixel.italic {
+                            operations.push(termion::style::Italic.to_string());
+                        } else {
+                            operations.push(termion::style::NoItalic.to_string());
+                        }
+                        brush_italic = live_pixel.italic;
+                    }
+                    if brush_underline != live_pixel.underline {
+                        if live_pixel.underline {
+                            operations.push(termion::style::Underline.to_string());
+                        } else {
+                            operations.push(termion::style::NoUnderline.to_string());
+                        }
+                        brush_underline = live_pixel.underline;
+                    }
 
                     operations.push(live_pixel.char.to_string());
-                    brush_pos = pos;
+                    brush_pos = pos + 1;
 
                     // Update previous buffer
                     self.prev_buffer[y as usize][x as usize] = live_pixel.clone();
@@ -150,8 +177,8 @@ impl Window for Frame<'_> {
         self.size
     }
 
-    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color) {
-        self.parent.write_at(x + self.offset.0, y + self.offset.1, char, bg, fg);
+    fn write_at(&mut self, x: u16, y: u16, char: char, bg: Color, fg: Color, bold: bool, italic: bool, underline: bool) {
+        self.parent.write_at(x + self.offset.0, y + self.offset.1, char, bg, fg, bold, italic, underline);
     }
 }
 
