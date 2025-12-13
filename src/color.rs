@@ -33,6 +33,19 @@ static GRAY_BG: &str = "\x1B[48;2;150;150;150m";
 static PINK_FG: &str = "\x1B[38;2;255;100;150m";
 static PINK_BG: &str = "\x1B[48;2;255;150;200m";
 
+static COLOR_ORDER: [Color; 10] = [
+    Black,
+    Red,
+    Magenta,
+    Blue,
+    Cyan,
+    Yellow,
+    Green,
+    LightBlack,
+    LightWhite,
+    White,
+];
+
 impl Color {
     pub fn name(&self) -> &'static str {
         match self {
@@ -103,9 +116,27 @@ impl Color {
         }.to_string()
     }
 
+    pub fn next_color(&self) -> Color {
+        for (i, c) in COLOR_ORDER.iter().enumerate() {
+            if c == self {
+                return COLOR_ORDER[(i + 1) % COLOR_ORDER.len()];
+            }
+        }
+        Black
+    }
+
+    pub fn prev_color(&self) -> Color {
+        for (i, c) in COLOR_ORDER.iter().enumerate() {
+            if c == self {
+                return COLOR_ORDER[(i + COLOR_ORDER.len() - 1) % COLOR_ORDER.len()];
+            }
+        }
+        Black
+    }
+
     pub fn contrast_color(&self) -> Color {
         match self {
-            Black | Blue | Magenta | Cyan | LightBlack | LightBlue | LightMagenta | LightCyan => White,
+            Black | LightBlack => White,
             _ => Black,
         }
     }

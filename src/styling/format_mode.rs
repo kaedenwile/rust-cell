@@ -1,5 +1,4 @@
 use std::cmp::min;
-use crate::color::Color;
 use crate::keyboard::Key;
 use crate::state::{Mode, State};
 use crate::styling::{CellStyles, StylingState};
@@ -25,6 +24,17 @@ impl State {
             Key::Up => state.styling_state.cursor = state.styling_state.cursor.saturating_sub(1),
             Key::Down => state.styling_state.cursor = min(4, state.styling_state.cursor + 1),
 
+            Key::Right => match state.styling_state.cursor {
+                3 => state.fg_next_color(),
+                4 => state.bg_next_color(),
+                _ => {}
+            },
+            Key::Left => match state.styling_state.cursor {
+                3 => state.fg_prev_color(),
+                4 => state.bg_prev_color(),
+                _ => {}
+            },
+
             Key::Char(' ') => state.toggle_selected_styling_option(),
             Key::Char('b') => state.toggle_bold(),
             Key::Char('i') => state.toggle_italic(),
@@ -46,13 +56,29 @@ impl State {
         self.styling_state.underline = !self.styling_state.underline;
     }
 
+    fn fg_next_color(&mut self) {
+        self.styling_state.fg = self.styling_state.fg.next_color()
+    }
+
+    fn fg_prev_color(&mut self) {
+        self.styling_state.fg = self.styling_state.fg.prev_color()
+    }
+
+    fn bg_next_color(&mut self) {
+        self.styling_state.bg = self.styling_state.bg.next_color()
+    }
+
+    fn bg_prev_color(&mut self) {
+        self.styling_state.bg = self.styling_state.bg.prev_color()
+    }
+
     fn toggle_selected_styling_option(&mut self) {
         match self.styling_state.cursor {
             0 => self.toggle_bold(),
             1 => self.toggle_italic(),
             2 => self.toggle_underline(),
-            3 => self.styling_state.fg = Color::Blue,
-            4 => self.styling_state.bg = Color::LightGreen,
+            3 => self.fg_next_color(),
+            4 => self.bg_next_color(),
             _ => {}
         }
     }
