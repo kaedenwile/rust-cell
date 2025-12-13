@@ -1,5 +1,6 @@
 use crate::cursor::Cursor;
 use crate::keyboard::Key;
+use crate::screen::CELL_WIDTH;
 use crate::state::{Mode, State};
 
 impl State {
@@ -81,8 +82,12 @@ impl State {
 
     fn column_width(&mut self, direction: i16) {
         if let Cursor::Single((_, c)) = self.cursor {
-            let current_width = self.sheet.column_widths.get(c as usize).unwrap_or(&10);
+            let current_width = self.sheet.column_widths.get(c as usize).unwrap_or(&CELL_WIDTH);
             let new_width = current_width.saturating_add_signed(direction).max(1);
+
+            if self.sheet.column_widths.len() <= c as usize {
+                self.sheet.column_widths.resize(c as usize + 1, CELL_WIDTH);
+            }
             self.sheet.column_widths[c as usize] = new_width;
         }
     }

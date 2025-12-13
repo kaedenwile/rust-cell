@@ -8,6 +8,7 @@ pub enum Color {
     Yellow,
     Blue,
     Magenta,
+    Pink,
     Cyan,
     White,
     Gray,
@@ -28,7 +29,34 @@ static LIGHT_GRAY_BG: &str = "\x1B[48;2;220;220;220m";
 static GRAY_FG: &str = "\x1B[38;2;150;150;150m";
 static GRAY_BG: &str = "\x1B[48;2;150;150;150m";
 
+// static LIGHT_MAGENTA_FG: &str = "\x1B[38;2;150;150;150m";
+static PINK_FG: &str = "\x1B[38;2;255;100;150m";
+static PINK_BG: &str = "\x1B[48;2;255;150;200m";
+
 impl Color {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Black => "Black",
+            Red => "Red",
+            Green => "Green",
+            Yellow => "Yellow",
+            Blue => "Blue",
+            Magenta => "Magenta",
+            Cyan => "Cyan",
+            White => "White",
+            Gray => "Gray",
+            Pink => "Pink",
+            LightBlack => "Light Black",
+            LightRed => "Light Red",
+            LightGreen => "Light Green",
+            LightYellow => "Light Yellow",
+            LightBlue => "Light Blue",
+            LightMagenta => "Light Magenta",
+            LightCyan => "Light Cyan",
+            LightWhite => "Light White",
+        }
+    }
+
     pub fn bg(&self) -> String {
         match self {
             Black => color::Black.bg_str(),
@@ -40,6 +68,7 @@ impl Color {
             Cyan => color::Cyan.bg_str(),
             White => color::White.bg_str(),
             Gray => GRAY_BG,
+            Pink => PINK_BG,
             LightBlack => color::LightBlack.bg_str(),
             LightRed => color::LightRed.bg_str(),
             LightGreen => color::LightGreen.bg_str(),
@@ -62,6 +91,7 @@ impl Color {
             Cyan => color::Cyan.fg_str(),
             White => color::White.fg_str(),
             Gray => GRAY_FG,
+            Pink => PINK_FG,
             LightBlack => color::LightBlack.fg_str(),
             LightRed => color::LightRed.fg_str(),
             LightGreen => color::LightGreen.fg_str(),
@@ -71,5 +101,12 @@ impl Color {
             LightCyan => color::LightCyan.fg_str(),
             LightWhite => LIGHT_GRAY_FG,
         }.to_string()
+    }
+
+    pub fn contrast_color(&self) -> Color {
+        match self {
+            Black | Blue | Magenta | Cyan | LightBlack | LightBlue | LightMagenta | LightCyan => White,
+            _ => Black,
+        }
     }
 }

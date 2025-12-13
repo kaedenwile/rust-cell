@@ -39,6 +39,15 @@ impl Display for Cursor {
 }
 
 impl Cursor {
+    pub fn anchor(&self) -> Address {
+        match *self {
+            Cursor::Single(addr) => addr,
+            Cursor::Range(start, _) => start,
+            Cursor::Row(r) => (r, 0),
+            Cursor::Column(c) => (0, c),
+        }
+    }
+
     pub fn contains(&self, addr: Address) -> bool {
         match *self {
             Cursor::Single((r, c)) => addr == (r, c),

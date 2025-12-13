@@ -39,7 +39,7 @@ impl StatusBar {
             Mode::Nav => Color::LightBlue,
             Mode::Edit => Color::LightGreen,
             Mode::Save => Color::LightYellow,
-            Mode::Format => Color::LightMagenta,
+            Mode::Format => Color::Pink,
         }
     }
 

@@ -12,7 +12,8 @@ enum Position {
     InsideCell(Address, CellComputation, CellStyles),
 }
 
-static CELL_WIDTH: u16 = 8;
+// Default cell width
+pub static CELL_WIDTH: u16 = 8;
 static ROW_HEADER_WIDTH: u16 = 3;
 static ELLIPSIS: char = '…';
 
@@ -52,9 +53,13 @@ pub fn draw(window: &mut dyn Window, state: &State) {
             };
 
             let bg: Color = match (&position, cursor) {
+                // Apply formatting background if in format mode and cell is selected
+                (InsideCell(address, _, _), cursor)
+                if cursor.contains(*address) && matches!(state.mode, Mode::Format) => state.styling_state.bg,
                 // Highlight cell if cell is selected
                 (InsideCell(address, _, _), cursor)
                 if cursor.contains(*address) => Color::LightWhite,
+                // Normal cell background
                 (InsideCell(_, _, CellStyles { bg, .. }), _) => *bg,
 
                 // Highlight row header if row is selected
@@ -68,12 +73,20 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                 if cursor_col == col => Color::LightWhite,
                 // Column is not selected
                 (ColumnHeader(_), _) => Color::Gray,
+
+                // Pivot cell background
                 (Pivot, _) => Color::Black
             };
 
             let fg = match &position {
+                // Apply formatting colors if in format mode and cell is selected
+                InsideCell(address, _, _)
+                if cursor.contains(*address) && matches!(state.mode, Mode::Format) => state.styling_state.fg,
+                // Error cells are red
                 InsideCell(_, cell, _) if cell.error => Color::Red,
+                // Normal cell foreground
                 InsideCell(_, _, CellStyles { fg, .. }) => *fg,
+                // Headers foreground
                 _ => Color::Black,
             };
 

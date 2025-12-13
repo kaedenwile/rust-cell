@@ -23,6 +23,9 @@ mod cursor;
 mod keyboard;
 mod sheet;
 mod styling;
+mod rich_text;
+
+pub use crate::rich_text::{RichText, RichTextStyle, RichTextWordConversion};
 
 fn main() {
     let screen = &mut screen();

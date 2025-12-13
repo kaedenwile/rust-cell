@@ -2,7 +2,7 @@ use crate::menu::Menu;
 use crate::screen::draw;
 use crate::state::{Mode, State};
 use crate::status_bar::StatusBar;
-use crate::styling::StylingWindow;
+use crate::styling::{StylingWindow, STYLING_WINDOW_WIDTH};
 use crate::window::{Frame, Screen, Window};
 
 pub struct ScreenLayout<'a> {
@@ -33,7 +33,7 @@ impl<'a> ScreenLayout<'a> {
         let (width, height) = self.screen.size();
 
         let (primary_w, secondary_w) = match state.mode {
-            Mode::Format => (width - 32, 32),
+            Mode::Format => (width - STYLING_WINDOW_WIDTH, STYLING_WINDOW_WIDTH),
             _ => (width, 0),
         };
 
