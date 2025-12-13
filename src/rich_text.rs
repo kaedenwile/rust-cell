@@ -82,7 +82,14 @@ impl RichText {
                 }
                 RichTextWord::RichText(rich_text) => {
                     for rtc in rich_text.rich_text_chars.iter() {
-                        rich_text_chars.push(rtc.clone());
+                        rich_text_chars.push(RichTextChar {
+                            ch: rtc.ch,
+                            bold: rtc.bold || current_bold,
+                            italic: rtc.italic || current_italic,
+                            underline: rtc.underline || current_underline,
+                            fg: rtc.fg.or(current_fg),
+                            bg: rtc.bg.or(current_bg),
+                        });
                     }
                 }
             }
