@@ -9,8 +9,8 @@ impl Menu {
     pub fn draw(window: &mut dyn Window, state: &State) {
         let (width, _) = window.size();
         let message = rich_text!(
-            Menu::format_menu(state), "  ",
             Menu::edit_menu(state), "  ",
+            Menu::format_menu(state), "  ",
             Menu::save_menu(state), "  ",
             underline!("Q"), "uit"
         );

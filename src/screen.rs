@@ -58,19 +58,19 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                 if cursor.contains(*address) && matches!(state.mode, Mode::Format) => state.styling_state.bg,
                 // Highlight cell if cell is selected
                 (InsideCell(address, _, _), cursor)
-                if cursor.contains(*address) => Color::LightWhite,
+                if cursor.contains(*address) => Color::CursorWhite,
                 // Normal cell background
                 (InsideCell(_, _, CellStyles { bg, .. }), _) => *bg,
 
                 // Highlight row header if row is selected
                 (RowHeader(row), Cursor::Row(cursor_row))
-                if cursor_row == row => Color::LightWhite,
+                if cursor_row == row => Color::CursorWhite,
                 // Row is not selected
                 (RowHeader(_), _) => Color::Gray,
 
                 // Highlight col header if col is selected
                 (ColumnHeader(col), Cursor::Column(cursor_col))
-                if cursor_col == col => Color::LightWhite,
+                if cursor_col == col => Color::CursorWhite,
                 // Column is not selected
                 (ColumnHeader(_), _) => Color::Gray,
 

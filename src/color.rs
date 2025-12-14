@@ -20,8 +20,12 @@ pub enum Color {
     LightMagenta,
     LightCyan,
     LightWhite,
+    CursorWhite,
 }
 use Color::*;
+
+static CURSOR_WHITE_FG: &str = "\x1B[38;2;228;228;228m";
+static CURSOR_WHITE_BG: &str = "\x1B[48;2;228;228;228m";
 
 static LIGHT_GRAY_FG: &str = "\x1B[38;2;220;220;220m";
 static LIGHT_GRAY_BG: &str = "\x1B[48;2;220;220;220m";
@@ -34,7 +38,7 @@ static PINK_FG: &str = "\x1B[38;2;255;100;150m";
 static PINK_BG: &str = "\x1B[48;2;255;150;200m";
 
 // Used for serializing colors as u8
-static ALL_COLORS: [Color; 18] = [
+static ALL_COLORS: [Color; 19] = [
     Black,
     Red,
     Green,
@@ -53,6 +57,7 @@ static ALL_COLORS: [Color; 18] = [
     LightMagenta,
     LightCyan,
     LightWhite,
+    CursorWhite
 ];
 static COLOR_ORDER: [Color; 10] = [
     Black,
@@ -88,6 +93,7 @@ impl Color {
             LightMagenta => "Light Magenta",
             LightCyan => "Light Cyan",
             LightWhite => "Light White",
+            CursorWhite => "Cursor White",
         }
     }
 
@@ -111,6 +117,7 @@ impl Color {
             LightMagenta => color::LightMagenta.bg_str(),
             LightCyan => color::LightCyan.bg_str(),
             LightWhite => LIGHT_GRAY_BG,
+            CursorWhite => CURSOR_WHITE_BG,
         }.to_string()
     }
 
@@ -134,6 +141,7 @@ impl Color {
             LightMagenta => color::LightMagenta.fg_str(),
             LightCyan => color::LightCyan.fg_str(),
             LightWhite => LIGHT_GRAY_FG,
+            CursorWhite => CURSOR_WHITE_FG,
         }.to_string()
     }
 
