@@ -2,7 +2,7 @@ use crate::color::Color;
 use crate::compute::CellComputation;
 use crate::cursor::Cursor;
 use crate::state::{Address, Mode, State};
-use crate::styling::CellStyles;
+use crate::styling::{Alignment, CellStyles};
 use crate::window::Window;
 
 enum Position {
@@ -115,34 +115,36 @@ pub fn draw(window: &mut dyn Window, state: &State) {
                     .nth_back((col_width_remaining - 1) as usize)
                     .unwrap_or(' '),
 
-                InsideCell(cell_addr, cell, _) => {
-                    let is_sole_selection = match state.cursor {
-                        Cursor::Single(addr) => addr == cell_addr,
-                        _ => false,
-                    };
+                InsideCell(addr, cell, styles) => {
+                    let cell_is_selected = cursor.contains(addr);
 
                     let content = match state.mode {
-                        Mode::Edit if is_sole_selection => &state.edit_buffer,
+                        Mode::Edit if cell_is_selected => &state.edit_buffer,
                         _ => &cell.display,
                     };
-                    let mut chars = content.chars();
 
-                    // match &cell.alignment {
-                    //     Alignment::Left => {
-                    if content.len() > col_width as usize && text_pos == 1 {
-                        ELLIPSIS
-                    } else {
-                        chars.nth((col_width - col_width_remaining) as usize).unwrap_or(' ')
+                    let alignment = match state.mode {
+                        Mode::Format if cell_is_selected => state.styling_state.alignment,
+                        _ => styles.alignment,
+                    };
+
+                    let mut chars = content.chars();
+                    match alignment {
+                        Alignment::Left => {
+                            if content.len() > col_width as usize && text_pos == 1 {
+                                ELLIPSIS
+                            } else {
+                                chars.nth((col_width - col_width_remaining) as usize).unwrap_or(' ')
+                            }
+                        }
+                        Alignment::Right => {
+                            if content.len() > col_width as usize && col_width_remaining == col_width {
+                                ELLIPSIS
+                            } else {
+                                chars.nth_back((col_width_remaining - 1) as usize).unwrap_or(' ')
+                            }
+                        }
                     }
-                    //     }
-                    //     Alignment::Right => {
-                    //         if content.len() > 8 && text_pos == 0 {
-                    //             Some(ELLIPSIS)
-                    //         } else {
-                    //             chars.nth_back(8 - text_pos as usize)
-                    //         }
-                    //     }
-                    // }.unwrap_or(' ')
                 }
             };
 

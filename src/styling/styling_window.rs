@@ -1,5 +1,5 @@
 use crate::color::Color::{Black, Gray, LightWhite};
-use crate::{bold, rich_text, underline};
+use crate::{bold, italic, rich_text, underline};
 use crate::rich_text::RichTextChar;
 use crate::state::State;
 use crate::window::Window;
@@ -18,9 +18,9 @@ impl StylingWindow {
             rich_text!(""),
             bold!("Styling Options"),
             rich_text!(""),
-            rich_text!("[", if styling_state.bold { "B" } else { " " }, "] ", underline!("B"), "old"),
-            rich_text!("[", if styling_state.italic { "I" } else { " " }, "] ", underline!("I"), "talic"),
-            rich_text!("[", if styling_state.underline { "U" } else { " " }, "] ", underline!("U"), "nderline"),
+            rich_text!("[", if styling_state.bold { "B" } else { " " }, "] ", bold!("Bold")),
+            rich_text!("[", if styling_state.italic { "I" } else { " " }, "] ", italic!("Italic")),
+            rich_text!("[", if styling_state.underline { "U" } else { " " }, "] ", underline!("Underline")),
             rich_text!(""),
             rich_text!("Foreground: ",
                 RichTextStyle::Foreground(styling_state.fg),
@@ -36,6 +36,8 @@ impl StylingWindow {
                 RichTextStyle::ForegroundReset,
                 RichTextStyle::BackgroundReset
             ),
+            rich_text!(""),
+            rich_text!("Alignment: ", styling_state.alignment.name()),
         ];
 
         for y in 0..height {
@@ -54,6 +56,7 @@ impl StylingWindow {
                     5 if styling_state.cursor == 2 => true,
                     7 if styling_state.cursor == 3 => true,
                     8 if styling_state.cursor == 4 => true,
+                    10 if styling_state.cursor == 5 => true,
                     _ => false,
                 };
 

@@ -1,4 +1,5 @@
 use crate::color::Color;
+use crate::styling::alignment::Alignment;
 use crate::styling::CellStyles;
 
 #[derive(Clone)]
@@ -8,9 +9,9 @@ pub struct StylingState {
     pub bold: bool,
     pub italic: bool,
     pub underline: bool,
-
     pub bg: Color,
     pub fg: Color,
+    pub alignment: Alignment,
 }
 
 impl StylingState {
@@ -22,6 +23,7 @@ impl StylingState {
             underline: styles.underline,
             bg: styles.bg,
             fg: styles.fg,
+            alignment: styles.alignment,
         }
     }
 
@@ -32,6 +34,7 @@ impl StylingState {
             underline: self.underline,
             bg: self.bg,
             fg: self.fg,
+            alignment: self.alignment,
         }
     }
 }
@@ -45,6 +48,7 @@ impl Default for StylingState {
             underline: false,
             bg: Color::White,
             fg: Color::Black,
+            alignment: Alignment::Left,
         }
     }
 }

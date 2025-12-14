@@ -2,6 +2,7 @@ use std::cmp::min;
 use crate::keyboard::Key;
 use crate::state::{Mode, State};
 use crate::styling::{CellStyles, StylingState};
+use crate::styling::alignment::Alignment;
 
 impl State {
     pub fn enter_format_mode(&mut self) {
@@ -22,23 +23,38 @@ impl State {
             Key::Esc => state.mode = Mode::Nav,
 
             Key::Up => state.styling_state.cursor = state.styling_state.cursor.saturating_sub(1),
-            Key::Down => state.styling_state.cursor = min(4, state.styling_state.cursor + 1),
+            Key::Down => state.styling_state.cursor = min(5, state.styling_state.cursor + 1),
 
             Key::Right => match state.styling_state.cursor {
                 3 => state.fg_next_color(),
                 4 => state.bg_next_color(),
+                5 => state.styling_state.alignment = Alignment::Right,
                 _ => {}
             },
             Key::Left => match state.styling_state.cursor {
                 3 => state.fg_prev_color(),
                 4 => state.bg_prev_color(),
+                5 => state.styling_state.alignment = Alignment::Left,
                 _ => {}
             },
 
             Key::Char(' ') => state.toggle_selected_styling_option(),
-            Key::Char('b') => state.toggle_bold(),
-            Key::Char('i') => state.toggle_italic(),
-            Key::Char('u') => state.toggle_underline(),
+            Key::Char('b') => {
+                state.styling_state.cursor = 0;
+                state.toggle_bold()
+            }
+            Key::Char('i') => {
+                state.styling_state.cursor = 1;
+                state.toggle_italic()
+            }
+            Key::Char('u') => {
+                state.styling_state.cursor = 2;
+                state.toggle_underline()
+            }
+            Key::Char('a') => {
+                state.styling_state.cursor = 5;
+                state.toggle_alignment();
+            }
 
             _ => {}
         }
@@ -72,6 +88,13 @@ impl State {
         self.styling_state.bg = self.styling_state.bg.prev_color()
     }
 
+    fn toggle_alignment(&mut self) {
+        self.styling_state.alignment = match self.styling_state.alignment {
+            Alignment::Left => Alignment::Right,
+            Alignment::Right => Alignment::Left,
+        };
+    }
+
     fn toggle_selected_styling_option(&mut self) {
         match self.styling_state.cursor {
             0 => self.toggle_bold(),
@@ -79,6 +102,7 @@ impl State {
             2 => self.toggle_underline(),
             3 => self.fg_next_color(),
             4 => self.bg_next_color(),
+            5 => self.toggle_alignment(),
             _ => {}
         }
     }
@@ -91,6 +115,7 @@ impl State {
                 underline: self.styling_state.underline,
                 fg: self.styling_state.fg,
                 bg: self.styling_state.bg,
+                alignment: self.styling_state.alignment,
             };
             self.sheet.cell_styling.set_at(addr, styles);
         }

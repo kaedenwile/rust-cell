@@ -154,6 +154,7 @@ impl Screen {
             }
         }
 
+        operations.push(termion::style::Reset.to_string()); // Reset styles at the end
         write!(self.inner.borrow_mut(), "{}", operations.join("")).unwrap();
         self.inner.borrow_mut().flush().unwrap();
     }
