@@ -1,6 +1,7 @@
 use crate::state::State;
 use std::fs::File;
 use std::io::{Read, Write};
+use crate::styling::CellStyles;
 
 // TODO it would be nice to add a pretty error state on the state bar
 pub fn save(state: &State, filepath: &str) {
@@ -16,10 +17,21 @@ pub fn save(state: &State, filepath: &str) {
     }
     csv.push('\n');
 
-    for row in state.sheet.cells.iter_rows() {
+    for (y, row) in state.sheet.cells.iter_rows().iter().enumerate() {
         csv.push(','); // first column will be ignored
-        for cell in row {
+        for (x, cell) in row.iter().enumerate() {
             csv.push_str(cell);
+            if let Some(style) = state.sheet.cell_styling.get_at((y as u16, x as u16)) {
+                if *style != CellStyles::default() {
+                    // use separator to escape styling
+                    csv.push_str("|:");
+                    csv.push_str(
+                        state.sheet.cell_styling.get_at((y as u16, x as u16))
+                            .map(|s| s.serialize())
+                            .unwrap_or_default()
+                            .as_str());
+                }
+            }
             csv.push(',');
         }
         csv.push('\n');
@@ -46,7 +58,14 @@ pub fn load(filepath: &str) -> State {
             if r == 0 {
                 state.sheet.column_widths.push(cell.parse::<u16>().unwrap_or(8));
             } else {
-                state.sheet.cells.set_at(((r - 1) as u16, c as u16), cell.to_string())
+                let (cell, styling) = cell.split_once("|:").unwrap_or((cell, ""));
+                state.sheet.cells.set_at(((r - 1) as u16, c as u16), cell.to_string());
+                if !styling.is_empty() {
+                    state.sheet.cell_styling.set_at(
+                        ((r - 1) as u16, c as u16),
+                        CellStyles::deserialize(styling).unwrap_or_default(),
+                    );
+                }
             }
         }
     }

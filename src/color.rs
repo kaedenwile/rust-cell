@@ -33,6 +33,27 @@ static GRAY_BG: &str = "\x1B[48;2;150;150;150m";
 static PINK_FG: &str = "\x1B[38;2;255;100;150m";
 static PINK_BG: &str = "\x1B[48;2;255;150;200m";
 
+// Used for serializing colors as u8
+static ALL_COLORS: [Color; 18] = [
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Pink,
+    Cyan,
+    White,
+    Gray,
+    LightBlack,
+    LightRed,
+    LightGreen,
+    LightYellow,
+    LightBlue,
+    LightMagenta,
+    LightCyan,
+    LightWhite,
+];
 static COLOR_ORDER: [Color; 10] = [
     Black,
     Red,
@@ -139,5 +160,18 @@ impl Color {
             Black | LightBlack => White,
             _ => Black,
         }
+    }
+
+    pub fn to_u8(&self) -> u8 {
+        for (i, c) in ALL_COLORS.iter().enumerate() {
+            if c == self {
+                return i as u8;
+            }
+        }
+        0
+    }
+
+    pub fn from_u8(value: u8) -> Option<Color> {
+        ALL_COLORS.get(value as usize).copied()
     }
 }
